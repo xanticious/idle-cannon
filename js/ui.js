@@ -1,8 +1,9 @@
 // UI Management for HUD and interface
 
 class UIManager {
-  constructor(upgradeManager) {
+  constructor(upgradeManager, onUpgradePurchased = null) {
     this.upgradeManager = upgradeManager;
+    this.onUpgradePurchased = onUpgradePurchased;
     this.isHidden = false;
     this.elements = {};
 
@@ -98,6 +99,11 @@ class UIManager {
       // Update the UI
       this.updateUpgradeCard(upgradeType);
       this.updateStats();
+
+      // Notify the game that an upgrade was purchased
+      if (this.onUpgradePurchased) {
+        this.onUpgradePurchased(upgradeType);
+      }
 
       // Visual feedback
       this.showUpgradeEffect(upgradeType);

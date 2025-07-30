@@ -197,6 +197,7 @@ class Castle {
   }
 
   handleCollisions() {
+    // Handle cannonball-block collisions
     const collisions = this.physics.checkCollisions();
 
     for (const collision of collisions) {
@@ -249,6 +250,115 @@ class Castle {
         }
       }
     }
+
+    // Handle block-ground collisions
+    this.handleGroundCollisions();
+
+    // Handle block-block collisions
+    this.handleBlockCollisions();
+  }
+
+  handleGroundCollisions() {
+    const minDamageVelocity = 8; // Higher threshold for ground damage
+    const groundY = CONFIG.PHYSICS.GROUND_Y;
+
+    for (const block of this.blocks) {
+      if (block.isDestroyed) continue;
+
+      const pos = block.body.position;
+      const velocity = block.body.velocity;
+      const speed = Math.sqrt(
+        velocity.x * velocity.x + velocity.y * velocity.y
+      );
+
+      // Check if block is close to ground and moving downward with enough velocity
+      if (
+        pos.y >= groundY - CONFIG.PHYSICS.BLOCK_SIZE &&
+        velocity.y > minDamageVelocity
+      ) {
+        // Calculate damage based on impact velocity
+        let damage = Math.floor(velocity.y / 10);
+        damage = Math.max(1, Math.min(3, damage)); // 1-3 damage range
+
+        const wasDestroyed = block.takeDamage(damage);
+
+        if (wasDestroyed) {
+          // Create debris particles
+          this.particles.createDebris(pos.x, pos.y, block.material);
+          // Remove from physics world
+          this.physics.removeBlock(block.body);
+        }
+      }
+    }
+  }
+
+  handleBlockCollisions() {
+    const minDamageVelocity = 10; // Threshold for block-block damage
+
+    // Check all pairs of blocks for collisions
+    for (let i = 0; i < this.blocks.length; i++) {
+      if (this.blocks[i].isDestroyed) continue;
+
+      for (let j = i + 1; j < this.blocks.length; j++) {
+        if (this.blocks[j].isDestroyed) continue;
+
+        const blockA = this.blocks[i];
+        const blockB = this.blocks[j];
+
+        // Check if blocks are colliding
+        if (this.areBlocksColliding(blockA.body, blockB.body)) {
+          const velocityA = blockA.body.velocity;
+          const velocityB = blockB.body.velocity;
+
+          const speedA = Math.sqrt(
+            velocityA.x * velocityA.x + velocityA.y * velocityA.y
+          );
+          const speedB = Math.sqrt(
+            velocityB.x * velocityB.x + velocityB.y * velocityB.y
+          );
+
+          // Calculate relative velocity for impact force
+          const relativeSpeed = Math.sqrt(
+            (velocityA.x - velocityB.x) * (velocityA.x - velocityB.x) +
+              (velocityA.y - velocityB.y) * (velocityA.y - velocityB.y)
+          );
+
+          if (relativeSpeed > minDamageVelocity) {
+            // Calculate damage for both blocks based on relative impact
+            let damage = Math.floor(relativeSpeed / 15);
+            damage = Math.max(1, Math.min(2, damage)); // 1-2 damage range
+
+            // Apply damage to both blocks
+            const blockADestroyed = blockA.takeDamage(damage);
+            const blockBDestroyed = blockB.takeDamage(damage);
+
+            if (blockADestroyed) {
+              const pos = blockA.body.position;
+              this.particles.createDebris(pos.x, pos.y, blockA.material);
+              this.physics.removeBlock(blockA.body);
+            }
+
+            if (blockBDestroyed) {
+              const pos = blockB.body.position;
+              this.particles.createDebris(pos.x, pos.y, blockB.material);
+              this.physics.removeBlock(blockB.body);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  areBlocksColliding(bodyA, bodyB) {
+    const bounds1 = bodyA.bounds;
+    const bounds2 = bodyB.bounds;
+
+    return !(
+      bounds1.max.x < bounds2.min.x ||
+      bounds1.min.x > bounds2.max.x ||
+      bounds1.max.y < bounds2.min.y ||
+      bounds1.min.y > bounds2.max.y
+    );
   }
 
   checkDestroyed() {
@@ -268,6 +378,20 @@ class Castle {
     });
 
     if (activeBlocks.length === 0) {
+      this.isDestroyed = true;
+      this.onDestroyed();
+      return;
+    }
+
+    // Check if all remaining blocks are touching the ground
+    const groundY = CONFIG.PHYSICS.GROUND_Y;
+    const blockTouchingGround = activeBlocks.every((block) => {
+      const pos = block.body.position;
+      // Consider a block touching ground if it's within block size of ground level
+      return pos.y >= groundY - CONFIG.PHYSICS.BLOCK_SIZE;
+    });
+
+    if (blockTouchingGround && activeBlocks.length > 0) {
       this.isDestroyed = true;
       this.onDestroyed();
     }

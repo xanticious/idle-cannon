@@ -36,7 +36,9 @@ class Game {
     this.physics = new PhysicsWorld();
     this.particles = new ParticleSystem();
     this.upgradeManager = new UpgradeManager();
-    this.ui = new UIManager(this.upgradeManager);
+    this.ui = new UIManager(this.upgradeManager, (upgradeType) =>
+      this.onUpgradePurchased(upgradeType)
+    );
 
     // Create game objects
     this.cannon = new Cannon(
