@@ -32,88 +32,56 @@ class Cannon {
     this.height = 30;
   }
 
-  update(deltaTime, worldOffsetX = 0) {
+  update(deltaTime, isPaused = false) {
     // Update recoil animation (slower)
     if (this.recoil > 0) {
       this.recoil = Math.max(0, this.recoil - deltaTime * 0.003); // Slower animation
+    }
+
+    // Don't fire if paused
+    if (isPaused) {
+      return;
     }
 
     // Check if we can fire
     const now = Date.now();
     if (now - this.lastShot >= this.getFireRate()) {
-      this.fire(worldOffsetX);
+      this.fire();
       this.lastShot = now;
       this.justFired = true;
     }
   }
 
-  updateManual(deltaTime, manualAngle) {
-    // Update recoil animation (slower)
-    if (this.recoil > 0) {
-      this.recoil = Math.max(0, this.recoil - deltaTime * 0.003); // Slower animation
-    }
-
-    // Set angle for rendering
-    this.angle = -manualAngle;
-  }
-
-  canFire() {
-    const now = Date.now();
-    return now - this.lastShot >= this.getFireRate();
-  }
-
-  fireManual(angle) {
-    const barrelEndX = this.x + Math.cos(-angle) * this.barrelLength;
-    const barrelEndY = this.y + Math.sin(-angle) * this.barrelLength;
-
-    // Calculate velocity
-    const speed = this.getBallSpeed();
-    const velocity = {
-      x: Math.cos(-angle) * speed,
-      y: Math.sin(-angle) * speed,
-    };
-
-    // Create physics body
-    this.physics.createCannonball(
-      barrelEndX,
-      barrelEndY,
-      this.getBallSize(),
-      this.getBallWeight(),
-      velocity
-    );
-
-    // Visual effects
-    this.recoil = 1.0;
-    this.angle = -angle;
-    this.particles.createMuzzleFlash(barrelEndX, barrelEndY);
-    this.lastShot = Date.now();
-    this.justFired = true;
-  }
-
-  fire(worldOffsetX = 0) {
+  fire() {
     // Generate random angle between MIN_ANGLE and MAX_ANGLE
     const randomAngle =
       CONFIG.CANNON.MIN_ANGLE +
       Math.random() * (CONFIG.CANNON.MAX_ANGLE - CONFIG.CANNON.MIN_ANGLE);
 
-    // Create cannonball at barrel end, adjusted for world position
-    const barrelEndX =
-      this.x + Math.cos(-randomAngle) * this.barrelLength + worldOffsetX;
+    // Create cannonball at barrel end
+    const barrelEndX = this.x + Math.cos(-randomAngle) * this.barrelLength;
     const barrelEndY = this.y + Math.sin(-randomAngle) * this.barrelLength;
 
+    // Randomize speed and weight for each shot
+    const randomSpeed =
+      CONFIG.CANNON.SPEED_MIN +
+      Math.random() * (CONFIG.CANNON.SPEED_MAX - CONFIG.CANNON.SPEED_MIN);
+    const randomWeight =
+      CONFIG.CANNON.WEIGHT_MIN +
+      Math.random() * (CONFIG.CANNON.WEIGHT_MAX - CONFIG.CANNON.WEIGHT_MIN);
+
     // Calculate velocity (negative Y for upward)
-    const speed = this.getBallSpeed();
     const velocity = {
-      x: Math.cos(-randomAngle) * speed,
-      y: Math.sin(-randomAngle) * speed,
+      x: Math.cos(-randomAngle) * randomSpeed,
+      y: Math.sin(-randomAngle) * randomSpeed,
     };
 
-    // Create physics body
+    // Create physics body with randomized values
     this.physics.createCannonball(
       barrelEndX,
       barrelEndY,
       this.getBallSize(),
-      this.getBallWeight(),
+      randomWeight,
       velocity
     );
 

@@ -15,10 +15,10 @@ class Game {
     this.upgradeManager = null;
     this.ui = null;
 
-    // Side-scrolling world offset
-    this.worldOffsetX = 0;
-    this.scrollProgress = 0;
-    this.scrollDistance = 100;
+    // Cannon pause system
+    this.cannonPaused = false;
+    this.pauseStartTime = 0;
+    this.pauseDuration = 10000; // 10 seconds
 
     // Performance monitoring
     this.performanceMonitor = new PerformanceMonitor();
@@ -104,10 +104,6 @@ class Game {
       case GAME_STATES.CASTLE_DESTROYED:
         this.updateCastleDestroyed(deltaTime);
         break;
-
-      case GAME_STATES.MOVING_CANNON:
-        this.updateMovingCannon(deltaTime);
-        break;
     }
 
     // Add smoke trails to active cannonballs
@@ -115,19 +111,16 @@ class Game {
   }
 
   updatePlaying(deltaTime) {
-    // Calculate current world offset for cannon firing
-    let currentOffset = this.worldOffsetX;
-    if (this.gameState === GAME_STATES.MOVING_CANNON) {
-      const currentScroll = lerp(
-        0,
-        this.scrollDistance,
-        Easing.easeOut(this.scrollProgress)
-      );
-      currentOffset += currentScroll;
+    // Check if cannon pause has expired
+    if (this.cannonPaused) {
+      const now = Date.now();
+      if (now - this.pauseStartTime >= this.pauseDuration) {
+        this.cannonPaused = false;
+      }
     }
 
-    // Update cannon with world offset
-    this.cannon.update(deltaTime, currentOffset);
+    // Update cannon (pass pause state)
+    this.cannon.update(deltaTime, this.cannonPaused);
 
     // Update castle
     this.castle.update(deltaTime);
@@ -135,6 +128,10 @@ class Game {
     // Check if castle is destroyed
     if (this.castle.isDestroyed && !this.castle.fadingOut) {
       this.gameState = GAME_STATES.CASTLE_DESTROYED;
+
+      // Pause cannon for 10 seconds
+      this.cannonPaused = true;
+      this.pauseStartTime = Date.now();
 
       // Award money
       const reward = this.castle.getReward();
@@ -155,33 +152,11 @@ class Game {
 
     // Check if fade out is complete
     if (this.castle.isCompletelyDestroyed()) {
-      this.gameState = GAME_STATES.MOVING_CANNON;
-      this.scrollProgress = 0;
-    }
-  }
-
-  updateMovingCannon(deltaTime) {
-    // Scroll the world to the left (side-scroller effect)
-    this.scrollProgress += deltaTime * 0.001; // 1 second to scroll
-
-    if (this.scrollProgress >= 1.0) {
-      // Scrolling complete
-      this.scrollProgress = 1.0;
-      this.worldOffsetX += this.scrollDistance;
-
-      // Create new castle
+      // Create new castle immediately (it will drop from sky)
       this.createNewCastle();
 
       // Return to playing state
       this.gameState = GAME_STATES.PLAYING;
-    } else {
-      // Interpolate world offset for smooth scrolling
-      const currentScroll = lerp(
-        0,
-        this.scrollDistance,
-        Easing.easeOut(this.scrollProgress)
-      );
-      // This will be applied in the render method
     }
   }
 
@@ -189,10 +164,13 @@ class Game {
     // Clear old castle
     this.castle.clearBlocks();
 
-    // Create new castle at original position
+    // Clear all remaining cannonballs
+    this.physics.clearAllCannonballs();
+
+    // Create new castle at original position, but high in the sky
     this.castle = new Castle(
       CONFIG.CASTLE.X,
-      CONFIG.CASTLE.Y,
+      CONFIG.CASTLE.Y - 300, // Start 300 pixels above normal position
       this.physics,
       this.particles
     );
@@ -218,41 +196,21 @@ class Game {
     // Clear canvas with sky gradient
     this.clearCanvas();
 
-    // Apply world offset for side-scrolling to world elements only
-    this.ctx.save();
-
-    // Calculate current scroll offset
-    let currentOffset = this.worldOffsetX;
-    if (this.gameState === GAME_STATES.MOVING_CANNON) {
-      const currentScroll = lerp(
-        0,
-        this.scrollDistance,
-        Easing.easeOut(this.scrollProgress)
-      );
-      currentOffset += currentScroll;
-    }
-
-    this.ctx.translate(-currentOffset, 0);
-
     // Draw ground
-    this.drawGround(currentOffset);
+    this.drawGround();
 
     // Render physics bodies (cannonballs and blocks)
     this.physics.render(this.ctx);
 
-    // Render castle (affected by world offset)
+    // Render game objects
+    this.cannon.render(this.ctx);
     this.castle.render(this.ctx);
 
-    this.ctx.restore();
-
-    // Render cannon (NOT affected by world offset - stays in fixed screen position)
-    this.cannon.render(this.ctx);
-
-    // Render particles (affected by world offset)
-    this.ctx.save();
-    this.ctx.translate(-currentOffset, 0);
+    // Render particles
     this.particles.render(this.ctx);
-    this.ctx.restore();
+
+    // Show cannon pause indicator
+    this.renderCannonPauseIndicator();
 
     // Debug info (optional) - rendered without world offset
     if (window.location.search.includes("debug")) {
@@ -276,26 +234,69 @@ class Game {
     this.ctx.fillRect(0, 0, CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);
   }
 
-  drawGround(offsetX = 0) {
-    // Draw grass ground with extended width for scrolling
+  drawGround() {
+    // Draw grass ground
     this.ctx.fillStyle = CONFIG.COLORS.GRASS;
     this.ctx.fillRect(
-      -200, // Extended to left for smooth scrolling
+      0,
       CONFIG.PHYSICS.GROUND_Y,
-      CONFIG.CANVAS.WIDTH + 400, // Extended width
+      CONFIG.CANVAS.WIDTH,
       CONFIG.CANVAS.HEIGHT - CONFIG.PHYSICS.GROUND_Y
     );
 
-    // Add some grass texture that moves with the world
+    // Add some grass texture
     this.ctx.fillStyle = "#228B22";
-    for (let x = -200; x < CONFIG.CANVAS.WIDTH + 200; x += 20) {
-      const grassHeight = Math.sin((x + offsetX) * 0.01) * 3 + 2;
+    for (let x = 0; x < CONFIG.CANVAS.WIDTH; x += 20) {
+      const grassHeight = Math.sin(x * 0.01) * 3 + 2;
       this.ctx.fillRect(
         x,
         CONFIG.PHYSICS.GROUND_Y - grassHeight,
         2,
         grassHeight
       );
+    }
+  }
+
+  renderCannonPauseIndicator() {
+    if (this.cannonPaused) {
+      const now = Date.now();
+      const timeRemaining = this.pauseDuration - (now - this.pauseStartTime);
+      const secondsRemaining = Math.ceil(timeRemaining / 1000);
+
+      this.ctx.save();
+
+      // Draw pause indicator near cannon
+      this.ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+      this.ctx.font = "16px Arial";
+      this.ctx.textAlign = "center";
+
+      const text = `CANNON RELOADING: ${secondsRemaining}s`;
+      this.ctx.fillText(text, CONFIG.CANNON.X, CONFIG.CANNON.Y - 60);
+
+      // Draw progress bar
+      const barWidth = 100;
+      const barHeight = 8;
+      const progress = Math.max(0, timeRemaining / this.pauseDuration);
+
+      // Background bar
+      this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      this.ctx.fillRect(
+        CONFIG.CANNON.X - barWidth / 2,
+        CONFIG.CANNON.Y - 40,
+        barWidth,
+        barHeight
+      );
+
+      // Progress bar
+      this.ctx.fillStyle = "rgba(255, 100, 100, 0.9)";
+      this.ctx.fillRect(
+        CONFIG.CANNON.X - barWidth / 2,
+        CONFIG.CANNON.Y - 40,
+        barWidth * progress,
+        barHeight
+      );
+
+      this.ctx.restore();
     }
   }
 

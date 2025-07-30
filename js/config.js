@@ -9,11 +9,16 @@ const CONFIG = {
     X: 120,
     Y: 475,
     BASE_FIRE_RATE: 3000, // ms between shots
-    BASE_SPEED: 18, // Keep this at 18 for an entertaining slow initial cannonball.
+    BASE_SPEED: 19, // Keep this at 19 for an entertaining slow initial cannonball.
     BASE_SIZE: 8,
     BASE_WEIGHT: 0.75,
     MIN_ANGLE: (Math.PI * 11) / 180, // 11 degrees
     MAX_ANGLE: (Math.PI * 51) / 180, // 51 degrees
+    // Randomization ranges
+    SPEED_MIN: 15,
+    SPEED_MAX: 25,
+    WEIGHT_MIN: 0.6,
+    WEIGHT_MAX: 1.0,
   },
 
   CASTLE: {
@@ -40,8 +45,8 @@ const CONFIG = {
 
   PHYSICS: {
     GRAVITY: 1.0,
-    WOOD_HEALTH: 2,
-    STONE_HEALTH: 4,
+    WOOD_HEALTH: 5,
+    STONE_HEALTH: 10,
     BLOCK_SIZE: 25,
     GROUND_Y: 500,
   },
@@ -65,5 +70,4 @@ const MATERIALS = {
 const GAME_STATES = {
   PLAYING: "playing",
   CASTLE_DESTROYED: "castle_destroyed",
-  MOVING_CANNON: "moving_cannon",
 };

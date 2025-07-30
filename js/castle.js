@@ -206,16 +206,46 @@ class Castle {
       );
 
       if (hitBlock && !hitBlock.isDestroyed) {
-        // Apply damage
-        const wasDestroyed = hitBlock.takeDamage();
+        // Calculate collision velocity
+        const cannonball = collision.cannonball;
+        const velocity = cannonball.velocity;
+        const speed = Math.sqrt(
+          velocity.x * velocity.x + velocity.y * velocity.y
+        );
 
-        if (wasDestroyed) {
-          // Create debris particles
-          const pos = hitBlock.body.position;
-          this.particles.createDebris(pos.x, pos.y, hitBlock.material);
+        // Minimum velocity threshold to cause damage (prevents static damage)
+        const minDamageVelocity = 5;
 
-          // Remove from physics world
-          this.physics.removeBlock(hitBlock.body);
+        if (speed >= minDamageVelocity) {
+          // Calculate damage based on velocity
+          // Scale: 0-1 damage for speeds 5-15, 1-5 damage for speeds 15-50+
+          let damage = 0;
+
+          if (speed < 15) {
+            // Low speed: 0-1 damage
+            damage = Math.floor((speed - minDamageVelocity) / 10);
+          } else if (speed < 30) {
+            // Medium speed: 1-3 damage
+            damage = 1 + Math.floor((speed - 15) / 7.5);
+          } else {
+            // High speed: 3-5 damage
+            damage = Math.min(5, 3 + Math.floor((speed - 30) / 10));
+          }
+
+          // Ensure at least 1 damage for valid collisions
+          damage = Math.max(1, damage);
+
+          // Apply damage
+          const wasDestroyed = hitBlock.takeDamage(damage);
+
+          if (wasDestroyed) {
+            // Create debris particles
+            const pos = hitBlock.body.position;
+            this.particles.createDebris(pos.x, pos.y, hitBlock.material);
+
+            // Remove from physics world
+            this.physics.removeBlock(hitBlock.body);
+          }
         }
       }
     }

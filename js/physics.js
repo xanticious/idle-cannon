@@ -88,16 +88,24 @@ class PhysicsWorld {
   cleanupCannonballs() {
     const now = Date.now();
     const maxAge = 4000; // 4 seconds
+    const minVelocity = 0.5; // Velocity threshold to consider "stopped"
 
     for (let i = this.cannonballs.length - 1; i >= 0; i--) {
       const cb = this.cannonballs[i];
       const pos = cb.body.position;
+      const velocity = cb.body.velocity;
 
-      // Remove if off-screen or too old
+      // Calculate current speed
+      const speed = Math.sqrt(
+        velocity.x * velocity.x + velocity.y * velocity.y
+      );
+
+      // Remove if off-screen, too old, or stopped moving
       if (
         pos.x > CONFIG.CANVAS.WIDTH + 100 ||
         pos.y > CONFIG.CANVAS.HEIGHT + 100 ||
-        now - cb.createdAt > maxAge
+        now - cb.createdAt > maxAge ||
+        speed < minVelocity
       ) {
         Matter.World.remove(this.world, cb.body);
         this.cannonballs.splice(i, 1);
@@ -118,6 +126,13 @@ class PhysicsWorld {
       Matter.World.remove(this.world, block);
     }
     this.blocks = [];
+  }
+
+  clearAllCannonballs() {
+    for (const cb of this.cannonballs) {
+      Matter.World.remove(this.world, cb.body);
+    }
+    this.cannonballs = [];
   }
 
   // Check for collisions between cannonballs and blocks
