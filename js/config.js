@@ -12,8 +12,8 @@ const CONFIG = {
     BASE_SPEED: 19, // Keep this at 19 for an entertaining slow initial cannonball.
     BASE_SIZE: 8,
     BASE_WEIGHT: 0.75,
-    MIN_ANGLE: (Math.PI * 11) / 180, // 11 degrees
-    MAX_ANGLE: (Math.PI * 51) / 180, // 51 degrees
+    MIN_ANGLE: (Math.PI * 5) / 180, // 5 degrees
+    MAX_ANGLE: (Math.PI * 55) / 180, // 55 degrees
     // Randomization ranges
     SPEED_MIN: 15,
     SPEED_MAX: 25,
