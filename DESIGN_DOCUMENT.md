@@ -10,9 +10,8 @@ A web-based idle game featuring a medieval cannon that automatically fires canno
 2. Cannonballs destroy castle blocks
 3. When castle is destroyed, player earns money
 4. Fireworks celebration, wreckage fades
-5. Cannon rolls right to reveal new castle
-6. Player spends money on upgrades
-7. Repeat with improved cannon
+5. Player spends money on upgrades
+6. Repeat with improved cannon
 
 ## Technical Specifications
 
@@ -34,27 +33,16 @@ A web-based idle game featuring a medieval cannon that automatically fires canno
 ### Cannon System
 
 - **Position**: Fixed at 10% from left edge of screen
-- **Firing Angle**: 20-50 degrees (randomized with gaussian distribution)
 - **Auto-fire**: Continuous shooting with upgradeable fire rate
-- **Movement**: Rolls right after castle destruction (smooth animation)
-
-### Accuracy System
-
-```
-Initial Sigma: 15 degrees
-Target Angle: Calculated to hit near-side of castle
-Actual Angle: Normal distribution around target angle
-Accuracy Upgrade: Reduces sigma by 10% per level
-```
 
 ### Castle Generation
 
 - **Position**: Right side of screen (80-90% from left)
 - **Materials**:
-  - Wood blocks (brown/tan, 2-3 hits to destroy)
-  - Stone blocks (gray, 4-6 hits to destroy)
+  - Wood blocks (brown/tan, 5 hits to destroy)
+  - Stone blocks (gray, 10 hits to destroy)
 - **Structure**: Random but stable configurations
-- **Size**: Varies from 3x3 to 8x10 blocks
+- **Size**: Varies from 4x4 to 8x10 blocks
 - **Colors**: Bright LEGO-style palette
 
 ### Physics Properties
@@ -65,17 +53,14 @@ Accuracy Upgrade: Reduces sigma by 10% per level
 - **Blocks**:
   - Wood: mass=1.0, friction=0.8
   - Stone: mass=2.0, friction=0.9
-- **Gravity**: 0.8 (slightly reduced for dramatic effect)
+- **Gravity**: 1.0 (realistic Earth gravity)
 
 ## Upgrade System
 
 ### Upgrade Categories
 
-1. **Fire Rate** - Reduces time between shots
-2. **Weight** - Increases cannonball mass (more destructive force)
-3. **Size** - Increases cannonball radius (larger impact area)
-4. **Speed** - Increases initial velocity
-5. **Accuracy** - Reduces firing angle variance
+1. **Fire Rate** - Reduces time between shots (Level cap: 14)
+2. **Size** - Increases cannonball radius (Level cap: 10)
 
 ### Pricing Formula
 
@@ -86,18 +71,12 @@ Cost = Base Cost × (1.5 ^ Level)
 ### Base Costs
 
 - Fire Rate: $10
-- Weight: $25
 - Size: $50
-- Speed: $75
-- Accuracy: $100
 
 ### Upgrade Effects
 
 - **Fire Rate**: Reduces cooldown by 8% per level
-- **Weight**: Increases mass by 15% per level
 - **Size**: Increases radius by 10% per level
-- **Speed**: Increases velocity by 12% per level
-- **Accuracy**: Reduces sigma by 10% per level
 
 ## User Interface
 
@@ -166,15 +145,18 @@ Cost = Base Cost × (1.5 ^ Level)
 
 ### Progression Curve
 
-- **Early Game** (0-10 castles): High inaccuracy, slow fire rate
-- **Mid Game** (10-50 castles): Balanced progression, all upgrades viable
-- **Late Game** (50+ castles): Focus on optimization, prestige mechanics
+- **Early Game** (0-10 castles): Slow fire rate, small cannonballs, learning basic mechanics
+- **Mid Game** (10-50 castles): Balanced progression, both upgrades valuable
+- **Late Game** (50+ castles): Approaching upgrade caps, building money streaks
+- **World Progression**: 11 worlds with unique physics and visual themes
+- **Prestige System**: Infinite progression with increasing complexity
 
 ### Economy Balance
 
-- **Castle Reward**: $10-50 based on castle size and complexity
+- **Castle Reward**: $15-60 based on castle size and complexity
 - **Upgrade ROI**: Each upgrade should pay for itself within 3-5 castles
 - **Exponential Growth**: Player income should scale with upgrade costs
+- **Streak System**: Money multiplier encourages strategic upgrade timing
 
 ## Performance Considerations
 
@@ -213,11 +195,223 @@ Cost = Base Cost × (1.5 ^ Level)
 
 ## Future Enhancements
 
-- **Prestige System**: Reset progress for permanent bonuses
-- **Special Cannonballs**: Explosive, piercing, multi-shot
-- **Castle Themes**: Different architectural styles
-- **Achievements**: Unlock rewards for specific goals
-- **Mobile Support**: Touch controls and responsive design
+### Multi-World Progression System
+
+When players reach maximum upgrade levels (Fire Rate Level 14, Cannonball Size Level 10), they unlock the ability to progress to new worlds. Each world features unique environmental conditions that affect gameplay.
+
+#### World Progression
+
+**World List & Characteristics:**
+
+1. **Earth** (Starting World)
+
+   - Gravity: 1.0 (standard)
+   - Color Scheme: Green grass, blue sky, natural block colors
+   - Special Features: None (baseline)
+
+2. **Moon**
+
+   - Gravity: 0.17 (low gravity, projectiles travel further)
+   - Color Scheme: Grey/white lunar landscape, darker sky
+   - Special Features: Slower block falls, longer flight times
+
+3. **Mars**
+
+   - Gravity: 0.38 (reduced gravity)
+   - Color Scheme: Red/orange terrain, dusty atmosphere
+   - Special Features: Dust particle effects
+
+4. **Mercury**
+
+   - Gravity: 0.38 (same as Mars but different environment)
+   - Color Scheme: Metallic grey/silver, extreme lighting
+   - Special Features: High contrast lighting effects
+
+5. **Venus**
+
+   - Gravity: 0.90 (nearly Earth-like)
+   - Color Scheme: Yellow/orange dense atmosphere
+   - Special Features: Particle density effects
+
+6. **Jupiter**
+
+   - Gravity: 2.36 (high gravity, faster falls)
+   - Color Scheme: Swirling gas giant colors (browns, oranges, reds)
+   - Special Features: Storm particle effects
+
+7. **Saturn**
+
+   - Gravity: 1.06 (slightly higher than Earth)
+   - Color Scheme: Golden/yellow with ring particles
+   - Special Features: Ring debris visual effects
+
+8. **Uranus**
+
+   - Gravity: 0.89 (slightly less than Earth)
+   - Color Scheme: Blue-green methane atmosphere
+   - Special Features: Tilted world visual effects
+
+9. **Neptune**
+
+   - Gravity: 1.13 (higher than Earth)
+   - Color Scheme: Deep blue with wind streaks
+   - Special Features: Wind particle effects
+
+10. **Pluto**
+
+    - Gravity: 0.06 (extremely low)
+    - Color Scheme: Icy white/blue, dark space
+    - Special Features: Floating ice crystal effects
+
+11. **Ceres** (Final World)
+    - Gravity: 0.03 (lowest gravity)
+    - Color Scheme: Asteroid belt theme, rocky greys
+    - Special Features: Floating debris, completion fanfare
+
+#### World Transition Rules
+
+- Upgrades reset to Level 0 when entering a new world
+- Castle complexity scales appropriately for each world
+- Gravity affects both cannonball trajectory and block physics
+- Each world must be completed before unlocking the next
+
+### Prestige System
+
+After completing all 11 worlds (defeating Ceres), players can **Prestige** to restart the entire progression with powerful permanent bonuses.
+
+#### Prestige Benefits
+
+**Cannon Visual Progression:**
+Each prestige level unlocks a new cannon skin that affects both cannon and projectile appearance:
+
+1. **Prestige 1**: Pirate Cannon (weathered wood, iron cannonballs)
+2. **Prestige 2**: WW1 Artillery (military green, explosive shells)
+3. **Prestige 3**: WW2 Tank Cannon (armored steel, armor-piercing rounds)
+4. **Prestige 4**: Modern Tank (desert camo, high-velocity shells)
+5. **Prestige 5**: Mortar (compact design, arcing projectiles)
+6. **Prestige 6**: Bazooka (rocket launcher, missile projectiles)
+7. **Prestige 7**: Missile Launcher (futuristic, guided missiles)
+8. **Prestige 8**: Futuristic Cannon (energy weapon, plasma projectiles)
+
+**Economic Bonuses:**
+
+- **Income Multiplier**: +10% castle reward money per prestige level
+- **Compound Growth**: Higher prestige levels provide exponentially better progression
+
+#### Progressive Upgrade Unlocks
+
+Each prestige level unlocks a new upgrade category while retaining previous ones:
+
+**Prestige Level 0** (Starting Upgrades):
+
+- Fire Rate: Increases shooting frequency
+- Cannonball Size: Increases projectile radius and impact area
+
+**Prestige Level 1** - Unlock: **Double Shot**
+
+- **Effect**: Percentage chance to fire two cannonballs simultaneously
+- **Mechanics**: One projectile fires in the upper angle range, one in the lower range
+- **Scaling**: Higher levels increase activation percentage
+
+**Prestige Level 2** - Unlock: **Faster Reload**
+
+- **Effect**: Reduces downtime between castle destruction and new castle spawn
+- **Mechanics**: Decreases the 10-second pause period between castles
+- **Scaling**: Each level reduces reload time by a percentage
+
+**Prestige Level 3** - Unlock: **Blast Shot**
+
+- **Effect**: Percentage chance to fire a high-velocity horizontal shot
+- **Mechanics**: Special projectile travels perfectly horizontal at maximum speed
+- **Scaling**: Higher levels increase both activation chance and projectile speed
+
+**Prestige Level 4** - Unlock: **Fireballs**
+
+- **Effect**: Percentage chance for explosive projectiles
+- **Mechanics**: Red fireball projectiles explode on impact, damaging nearby blocks
+- **Scaling**: Higher levels increase activation chance and explosion radius
+
+**Prestige Level 5** - Unlock: **Bigger Castles**
+
+- **Effect**: Increases maximum castle dimensions and complexity
+- **Mechanics**: Raises width/height caps and adds more intricate structures
+- **Scaling**: Each level increases maximum castle size parameters
+
+**Prestige Level 6** - Unlock: **Passive Income**
+
+- **Effect**: Generates money automatically over time
+- **Mechanics**: Earns money per second based on recent income rate
+- **Scaling**: Higher levels increase passive income multiplier
+
+### Enhanced Economy System
+
+#### Money Streak Multiplier
+
+To make progression more rewarding and create decision points around upgrade timing:
+
+**Streak Mechanics:**
+
+```javascript
+const maxMultiplier = 10;
+const currentMultiplier = Math.min(
+  castlesDestroyedSinceLastUpgrade,
+  maxMultiplier
+);
+const moneyEarned = castleBaseValue * currentMultiplier;
+```
+
+**Behavior:**
+
+- Multiplier starts at 1x for the first castle after any upgrade purchase
+- Increases by 1x for each subsequent castle destroyed (2x, 3x, 4x...)
+- Caps at 10x multiplier for maximum streak value
+- **Resets to 1x** whenever ANY upgrade is purchased
+- Creates strategic decision: buy upgrades now or build streak for higher income?
+
+**Visual Feedback:**
+
+- Display current streak multiplier in UI
+- Show potential money earnings with current multiplier
+- Warning notification before purchasing upgrades that would reset streak
+
+#### Prestige Money Bonuses
+
+**Cumulative Bonuses:**
+
+- Each prestige level provides +10% bonus to ALL money earnings
+- Prestige 3 character earns 30% more money from every castle
+- Applies to both base castle rewards and streak multipliers
+- Stacks multiplicatively with world completion bonuses
+
+**Long-term Progression:**
+
+- High prestige levels can achieve very high income rates
+- Enables tackling increasingly difficult upgrade costs
+- Provides meaningful long-term progression beyond initial world completion
+
+### Technical Implementation Notes
+
+#### World System Architecture
+
+- Create `WorldManager` class to handle world transitions
+- Each world has gravity coefficient and color palette configuration
+- Save current world progress in localStorage
+- Smooth transitions between world environments
+
+#### Prestige System Architecture
+
+- Track prestige level and unlocked upgrades in save data
+- Modular upgrade system supports dynamic addition of new upgrade types
+- Visual cannon system for skin management and projectile appearance
+- Achievement system integration for prestige milestone rewards
+
+#### Performance Considerations
+
+- Lazy loading of world-specific assets
+- Efficient particle system scaling for environmental effects
+- Memory management for multiple upgrade types and visual effects
+
+This enhanced progression system provides hundreds of hours of engaging gameplay with meaningful choices, visual progression, and long-term goals while maintaining the core idle cannon destruction mechanics.
 
 ## Technical Implementation Notes
 

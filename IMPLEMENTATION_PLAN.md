@@ -68,15 +68,12 @@ class Cannon {
     this.x = x;
     this.y = y;
     this.world = world;
-    this.fireRate = 1000; // ms between shots
+    this.fireRate = 3000; // ms between shots (base: 3 seconds)
     this.lastShot = 0;
     this.cannonballs = [];
     this.upgrades = {
-      fireRate: 0,
-      weight: 0,
-      size: 0,
-      speed: 0,
-      accuracy: 0,
+      fireRate: 0, // Max level: 14
+      size: 0, // Max level: 10
     };
   }
 
@@ -86,10 +83,7 @@ class Cannon {
 
   fire(targetX, targetY) {
     // Create and fire cannonball with physics
-  }
-
-  calculateAngle(targetX, targetY) {
-    // Calculate firing angle with accuracy variance
+    // Uses random angle between MIN_ANGLE and MAX_ANGLE
   }
 
   render(ctx) {
@@ -133,16 +127,21 @@ class Castle {
 
 ```javascript
 class Block {
-  constructor(x, y, material, world) {
+  constructor(x, y, material, physicsBody) {
     this.material = material; // 'wood' or 'stone'
-    this.health = material === "wood" ? 2 : 5;
+    this.health = material === "wood" ? 5 : 10; // Updated health values
     this.maxHealth = this.health;
-    this.body = null; // Matter.js body
+    this.body = physicsBody; // Matter.js body
     this.isDestroyed = false;
+    this.damageFlash = 0; // Visual damage indicator
   }
 
   takeDamage(amount) {
-    // Handle damage and destruction
+    // Handle damage and destruction with visual flash
+  }
+
+  update(deltaTime) {
+    // Update damage flash animation
   }
 
   render(ctx) {
@@ -155,8 +154,9 @@ class Block {
 
 ```javascript
 class UIManager {
-  constructor(game) {
-    this.game = game;
+  constructor(upgradeManager, onUpgradePurchased) {
+    this.upgradeManager = upgradeManager;
+    this.onUpgradePurchased = onUpgradePurchased;
     this.money = 0;
     this.totalEarned = 0;
     this.isHidden = false;
@@ -172,11 +172,15 @@ class UIManager {
   }
 
   handleUpgrade(type) {
-    // Process upgrade purchases
+    // Process upgrade purchases with level caps
   }
 
   formatNumber(num) {
     // Format large numbers with k, m, b, t suffixes
+  }
+
+  showMoneyEarned(amount, x, y) {
+    // Floating money text animation
   }
 }
 ```
@@ -322,35 +326,36 @@ const CONFIG = {
   CASTLE: {
     X: 900,
     Y: 450,
-    MIN_WIDTH: 3,
+    MIN_WIDTH: 4, // Updated from 3
     MAX_WIDTH: 8,
-    MIN_HEIGHT: 3,
+    MIN_HEIGHT: 4, // Updated from 3
     MAX_HEIGHT: 10,
+    BASE_REWARD: 15,
   },
 
   UPGRADES: {
     BASE_COSTS: {
       fireRate: 10,
-      weight: 25,
       size: 50,
-      speed: 75,
-      accuracy: 100,
     },
     COST_MULTIPLIER: 1.5,
+    LEVEL_CAPS: {
+      // New: Upgrade level caps
+      fireRate: 14,
+      size: 10,
+    },
     EFFECTS: {
       fireRate: 0.08, // 8% faster per level
-      weight: 0.15, // 15% heavier per level
       size: 0.1, // 10% larger per level
-      speed: 0.12, // 12% faster per level
-      accuracy: 0.1, // 10% more accurate per level
     },
   },
 
   PHYSICS: {
-    GRAVITY: 0.8,
-    WOOD_HEALTH: 2,
-    STONE_HEALTH: 5,
-    BLOCK_SIZE: 30,
+    GRAVITY: 1.0, // Updated to realistic gravity
+    WOOD_HEALTH: 5, // Updated from 2
+    STONE_HEALTH: 10, // Updated from 5
+    BLOCK_SIZE: 25,
+    GROUND_Y: 500,
   },
 };
 ```
@@ -371,3 +376,301 @@ const CONFIG = {
 4. **Playtest**: Balance testing for upgrade costs and progression
 
 This implementation plan provides a roadmap for building the idle cannon game with proper architecture and scalable code structure.
+
+## Future Implementation: Multi-World System
+
+### World Manager Class
+
+```javascript
+class WorldManager {
+  constructor() {
+    this.currentWorld = 0;
+    this.worlds = [
+      {
+        name: "Earth",
+        gravity: 1.0,
+        colors: { sky: "#87CEEB", grass: "#32CD32" },
+      },
+      {
+        name: "Moon",
+        gravity: 0.17,
+        colors: { sky: "#1a1a1a", grass: "#C0C0C0" },
+      },
+      {
+        name: "Mars",
+        gravity: 0.38,
+        colors: { sky: "#CD853F", grass: "#B22222" },
+      },
+      {
+        name: "Mercury",
+        gravity: 0.38,
+        colors: { sky: "#2F2F2F", grass: "#696969" },
+      },
+      {
+        name: "Venus",
+        gravity: 0.9,
+        colors: { sky: "#FFA500", grass: "#FFD700" },
+      },
+      {
+        name: "Jupiter",
+        gravity: 2.36,
+        colors: { sky: "#DEB887", grass: "#8B4513" },
+      },
+      {
+        name: "Saturn",
+        gravity: 1.06,
+        colors: { sky: "#F4A460", grass: "#DAA520" },
+      },
+      {
+        name: "Uranus",
+        gravity: 0.89,
+        colors: { sky: "#4FD0E3", grass: "#40E0D0" },
+      },
+      {
+        name: "Neptune",
+        gravity: 1.13,
+        colors: { sky: "#4169E1", grass: "#1E90FF" },
+      },
+      {
+        name: "Pluto",
+        gravity: 0.06,
+        colors: { sky: "#191970", grass: "#B0C4DE" },
+      },
+      {
+        name: "Ceres",
+        gravity: 0.03,
+        colors: { sky: "#2F4F4F", grass: "#708090" },
+      },
+    ];
+  }
+
+  canProgressToNextWorld(upgradeManager) {
+    const upgrades = upgradeManager.getAllUpgradeLevels();
+    return (
+      upgrades.fireRate >= CONFIG.UPGRADES.LEVEL_CAPS.fireRate &&
+      upgrades.size >= CONFIG.UPGRADES.LEVEL_CAPS.size
+    );
+  }
+
+  progressToNextWorld(upgradeManager, physicsWorld) {
+    if (this.currentWorld < this.worlds.length - 1) {
+      this.currentWorld++;
+      upgradeManager.resetUpgrades(); // Reset to level 0
+      this.applyWorldSettings(physicsWorld);
+      return true;
+    }
+    return false; // All worlds completed, ready for prestige
+  }
+
+  applyWorldSettings(physicsWorld) {
+    const world = this.worlds[this.currentWorld];
+    physicsWorld.setGravity(world.gravity);
+    // Apply color scheme to rendering system
+  }
+}
+```
+
+### Prestige System Implementation
+
+```javascript
+class PrestigeManager {
+  constructor() {
+    this.prestigeLevel = 0;
+    this.unlockedUpgrades = ["fireRate", "size"];
+    this.cannonSkins = [
+      "medieval",
+      "pirate",
+      "ww1",
+      "ww2",
+      "tank",
+      "mortar",
+      "bazooka",
+      "missile",
+      "futuristic",
+    ];
+  }
+
+  canPrestige(worldManager) {
+    return worldManager.currentWorld === 10; // Completed Ceres
+  }
+
+  prestige(upgradeManager, worldManager) {
+    this.prestigeLevel++;
+
+    // Reset world progress
+    worldManager.currentWorld = 0;
+    upgradeManager.resetAllProgress();
+
+    // Unlock new upgrade type
+    this.unlockNewUpgrade();
+
+    // Unlock new cannon skin
+    const skinIndex = Math.min(this.prestigeLevel, this.cannonSkins.length - 1);
+    this.currentSkin = this.cannonSkins[skinIndex];
+  }
+
+  unlockNewUpgrade() {
+    const upgradeProgression = [
+      ["fireRate", "size"],
+      ["fireRate", "size", "doubleShot"],
+      ["fireRate", "size", "doubleShot", "fasterReload"],
+      ["fireRate", "size", "doubleShot", "fasterReload", "blastShot"],
+      [
+        "fireRate",
+        "size",
+        "doubleShot",
+        "fasterReload",
+        "blastShot",
+        "fireballs",
+      ],
+      [
+        "fireRate",
+        "size",
+        "doubleShot",
+        "fasterReload",
+        "blastShot",
+        "fireballs",
+        "biggerCastles",
+      ],
+      [
+        "fireRate",
+        "size",
+        "doubleShot",
+        "fasterReload",
+        "blastShot",
+        "fireballs",
+        "biggerCastles",
+        "passiveIncome",
+      ],
+    ];
+
+    const maxLevel = Math.min(
+      this.prestigeLevel,
+      upgradeProgression.length - 1
+    );
+    this.unlockedUpgrades = upgradeProgression[maxLevel];
+  }
+
+  getIncomeMultiplier() {
+    return 1 + this.prestigeLevel * 0.1; // +10% per prestige level
+  }
+}
+```
+
+### Money Streak System
+
+```javascript
+class StreakManager {
+  constructor() {
+    this.castlesDestroyedSinceUpgrade = 0;
+    this.maxMultiplier = 10;
+  }
+
+  onCastleDestroyed() {
+    this.castlesDestroyedSinceUpgrade++;
+  }
+
+  onUpgradePurchased() {
+    this.castlesDestroyedSinceUpgrade = 0;
+  }
+
+  getCurrentMultiplier() {
+    return Math.min(this.castlesDestroyedSinceUpgrade, this.maxMultiplier);
+  }
+
+  calculateMoney(baseAmount, prestigeManager) {
+    const streakMultiplier = this.getCurrentMultiplier();
+    const prestigeMultiplier = prestigeManager.getIncomeMultiplier();
+    return Math.floor(baseAmount * streakMultiplier * prestigeMultiplier);
+  }
+}
+```
+
+### Advanced Upgrade System
+
+```javascript
+class AdvancedUpgradeManager extends UpgradeManager {
+  constructor() {
+    super();
+    this.prestigeUpgrades = {
+      doubleShot: 0,
+      fasterReload: 0,
+      blastShot: 0,
+      fireballs: 0,
+      biggerCastles: 0,
+      passiveIncome: 0,
+    };
+  }
+
+  getUpgradeEffects() {
+    return {
+      ...super.getUpgradeEffects(),
+      doubleShot: {
+        chance: this.prestigeUpgrades.doubleShot * 0.05, // 5% per level
+        maxChance: 0.5, // Cap at 50%
+      },
+      fasterReload: {
+        reduction: this.prestigeUpgrades.fasterReload * 0.1, // 10% faster per level
+        maxReduction: 0.8, // Cap at 80% reduction
+      },
+      blastShot: {
+        chance: this.prestigeUpgrades.blastShot * 0.03, // 3% per level
+        speed: 50 + this.prestigeUpgrades.blastShot * 5, // Base 50 + 5 per level
+      },
+      fireballs: {
+        chance: this.prestigeUpgrades.fireballs * 0.04, // 4% per level
+        explosionRadius: 30 + this.prestigeUpgrades.fireballs * 5, // Base 30 + 5 per level
+      },
+      biggerCastles: {
+        widthBonus: this.prestigeUpgrades.biggerCastles,
+        heightBonus: this.prestigeUpgrades.biggerCastles,
+      },
+      passiveIncome: {
+        multiplier: this.prestigeUpgrades.passiveIncome * 0.01, // 1% of recent income per level
+      },
+    };
+  }
+}
+```
+
+## Implementation Roadmap
+
+### Phase 5: World System (Month 2)
+
+- [ ] Implement WorldManager class
+- [ ] Create world transition UI
+- [ ] Add gravity scaling system
+- [ ] Implement world-specific color schemes
+- [ ] Add world completion detection
+
+### Phase 6: Prestige System (Month 3)
+
+- [ ] Implement PrestigeManager class
+- [ ] Create cannon skin system
+- [ ] Add prestige UI and confirmation dialogs
+- [ ] Implement income multiplier system
+- [ ] Add prestige statistics tracking
+
+### Phase 7: Advanced Upgrades (Month 4)
+
+- [ ] Implement new upgrade types (Double Shot, Faster Reload, etc.)
+- [ ] Create special projectile systems (Fireballs, Blast Shots)
+- [ ] Add passive income generation
+- [ ] Implement bigger castle generation
+- [ ] Add upgrade effect UI indicators
+
+### Phase 8: Money Streak System (Month 4)
+
+- [ ] Implement StreakManager class
+- [ ] Add streak UI indicators
+- [ ] Create streak warning system for upgrades
+- [ ] Add streak milestone celebrations
+- [ ] Integrate with prestige income bonuses
+
+### Phase 9: Polish & Integration (Month 5)
+
+- [ ] Integrate all systems with save/load
+- [ ] Add comprehensive tutorial system
+- [ ] Implement achievement system
+- [ ] Add advanced statistics tracking
+- [ ] Performance optimization for long-term play
