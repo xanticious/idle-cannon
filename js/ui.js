@@ -1,8 +1,9 @@
 // UI Management for HUD and interface
 
 class UIManager {
-  constructor(upgradeManager, onUpgradePurchased = null) {
+  constructor(upgradeManager, worldManager = null, onUpgradePurchased = null) {
     this.upgradeManager = upgradeManager;
+    this.worldManager = worldManager;
     this.onUpgradePurchased = onUpgradePurchased;
     this.isHidden = false;
     this.elements = {};
@@ -73,15 +74,17 @@ class UIManager {
             <div class="upgrade-name">${upgradeInfo.name}</div>
             <div class="upgrade-level">Level: <span class="level-value">${
               upgradeInfo.level
-            }</span></div>
+            }</span>${
+      upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""
+    }</div>
             <div class="upgrade-cost">Cost: $<span class="cost-value">${
               upgradeInfo.costFormatted
             }</span></div>
             <div class="upgrade-effect">${upgradeInfo.description}</div>
             <button class="upgrade-button" ${
-              !upgradeInfo.canAfford ? "disabled" : ""
+              !upgradeInfo.canAfford || upgradeInfo.isMaxed ? "disabled" : ""
             }>
-                UPGRADE
+                ${upgradeInfo.isMaxed ? "MAXED" : "UPGRADE"}
             </button>
         `;
 
@@ -118,12 +121,18 @@ class UIManager {
 
     // Update values
     card.querySelector(".level-value").textContent = upgradeInfo.level;
+    const levelDiv = card.querySelector(".upgrade-level");
+    levelDiv.innerHTML = `Level: <span class="level-value">${
+      upgradeInfo.level
+    }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""}`;
+
     card.querySelector(".cost-value").textContent = upgradeInfo.costFormatted;
     card.querySelector(".upgrade-effect").textContent = upgradeInfo.description;
 
     // Update button state
     const button = card.querySelector(".upgrade-button");
-    button.disabled = !upgradeInfo.canAfford;
+    button.disabled = !upgradeInfo.canAfford || upgradeInfo.isMaxed;
+    button.textContent = upgradeInfo.isMaxed ? "MAXED" : "UPGRADE";
   }
 
   updateAllUpgradeCards() {
@@ -155,6 +164,23 @@ class UIManager {
     this.elements.totalEarned.textContent = displayValues.totalEarned;
     this.elements.incomeRate.textContent = displayValues.incomeRate;
     this.elements.castlesDestroyed.textContent = displayValues.castlesDestroyed;
+
+    // Update money streak multiplier display if element exists
+    if (this.elements.streakMultiplier) {
+      const streak = this.upgradeManager.getStreakProgress();
+      this.elements.streakMultiplier.textContent = `${streak.multiplier}x`;
+    }
+
+    // Update world progression display if element exists
+    if (this.worldManager && this.elements.worldProgress) {
+      this.elements.worldProgress.textContent =
+        this.worldManager.getWorldProgressText();
+    }
+
+    if (this.worldManager && this.elements.worldCompletion) {
+      this.elements.worldCompletion.textContent =
+        this.worldManager.getCompletionProgressText(this.upgradeManager);
+    }
 
     // Update upgrade affordability
     this.updateAllUpgradeCards();

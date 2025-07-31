@@ -9,6 +9,9 @@ class UpgradeManager {
     this.lastIncomeUpdate = Date.now();
     this.recentEarnings = [];
 
+    // Money streak multiplier system
+    this.castlesDestroyedSinceLastUpgrade = 0;
+
     // Upgrade levels
     this.upgrades = {
       fireRate: 0,
@@ -24,21 +27,32 @@ class UpgradeManager {
 
   checkGodMode() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("godmode") === "true") {
-      this.money = 10000000000; // $10 billion
-      this.totalEarned = 10000000000;
-      console.log("God mode activated! Starting with $10 billion");
+    const moneyParam = urlParams.get("money");
+    if (moneyParam) {
+      const startingMoney = parseInt(moneyParam, 10);
+      if (!isNaN(startingMoney) && startingMoney > 0) {
+        this.money = startingMoney;
+        this.totalEarned = startingMoney;
+        console.log(
+          `Starting with custom money amount: $${formatNumber(startingMoney)}`
+        );
+      }
     }
   }
 
   earnMoney(amount) {
-    this.money += amount;
-    this.totalEarned += amount;
+    // Apply money streak multiplier
+    const streakMultiplier = this.getMoneyStreakMultiplier();
+    const finalAmount = Math.floor(amount * streakMultiplier);
+
+    this.money += finalAmount;
+    this.totalEarned += finalAmount;
     this.castlesDestroyed++;
+    this.castlesDestroyedSinceLastUpgrade++;
 
     // Track for income rate calculation
     this.recentEarnings.push({
-      amount: amount,
+      amount: finalAmount,
       timestamp: Date.now(),
     });
 
@@ -50,6 +64,9 @@ class UpgradeManager {
 
     this.updateIncomeRate();
     this.saveProgress();
+
+    // Return the actual amount earned (for UI display)
+    return finalAmount;
   }
 
   updateIncomeRate() {
@@ -78,17 +95,28 @@ class UpgradeManager {
   }
 
   canAfford(upgradeType) {
-    return this.money >= this.getUpgradeCost(upgradeType);
+    return (
+      this.money >= this.getUpgradeCost(upgradeType) &&
+      !this.isUpgradeMaxed(upgradeType)
+    );
+  }
+
+  isUpgradeMaxed(upgradeType) {
+    const levelCap = CONFIG.UPGRADES.LEVEL_CAPS[upgradeType];
+    return levelCap && this.upgrades[upgradeType] >= levelCap;
   }
 
   purchaseUpgrade(upgradeType) {
-    if (!this.canAfford(upgradeType)) {
+    if (!this.canAfford(upgradeType) || this.isUpgradeMaxed(upgradeType)) {
       return false;
     }
 
     const cost = this.getUpgradeCost(upgradeType);
     this.money -= cost;
     this.upgrades[upgradeType]++;
+
+    // Reset money streak multiplier when upgrade is purchased
+    this.castlesDestroyedSinceLastUpgrade = 0;
 
     this.saveProgress();
     return true;
@@ -102,12 +130,37 @@ class UpgradeManager {
     return { ...this.upgrades };
   }
 
+  getMoneyStreakMultiplier() {
+    return Math.min(
+      this.castlesDestroyedSinceLastUpgrade || 1,
+      CONFIG.MONEY.MAX_STREAK_MULTIPLIER
+    );
+  }
+
+  getStreakProgress() {
+    return {
+      current: this.castlesDestroyedSinceLastUpgrade,
+      multiplier: this.getMoneyStreakMultiplier(),
+      max: CONFIG.MONEY.MAX_STREAK_MULTIPLIER,
+    };
+  }
+
+  resetUpgradesForNewWorld() {
+    this.upgrades = {
+      fireRate: 0,
+      size: 0,
+    };
+    this.castlesDestroyedSinceLastUpgrade = 0;
+    this.saveProgress();
+  }
+
   // Save progress to localStorage
   saveProgress() {
     const saveData = {
       money: this.money,
       totalEarned: this.totalEarned,
       castlesDestroyed: this.castlesDestroyed,
+      castlesDestroyedSinceLastUpgrade: this.castlesDestroyedSinceLastUpgrade,
       upgrades: this.upgrades,
       timestamp: Date.now(),
     };
@@ -129,6 +182,8 @@ class UpgradeManager {
         this.money = data.money || 0;
         this.totalEarned = data.totalEarned || 0;
         this.castlesDestroyed = data.castlesDestroyed || 0;
+        this.castlesDestroyedSinceLastUpgrade =
+          data.castlesDestroyedSinceLastUpgrade || 0;
         this.upgrades = { ...this.upgrades, ...data.upgrades };
 
         // Calculate offline earnings (simple version)
@@ -170,6 +225,7 @@ class UpgradeManager {
     this.castlesDestroyed = 0;
     this.incomeRate = 0;
     this.recentEarnings = [];
+    this.castlesDestroyedSinceLastUpgrade = 0;
 
     this.upgrades = {
       fireRate: 0,
@@ -198,7 +254,9 @@ class UpgradeManager {
   // Get upgrade information for UI
   getUpgradeInfo(upgradeType) {
     const level = this.upgrades[upgradeType];
-    const cost = this.getUpgradeCost(upgradeType);
+    const levelCap = CONFIG.UPGRADES.LEVEL_CAPS[upgradeType];
+    const isMaxed = this.isUpgradeMaxed(upgradeType);
+    const cost = isMaxed ? 0 : this.getUpgradeCost(upgradeType);
     const canAfford = this.canAfford(upgradeType);
 
     // Calculate effect for display
@@ -209,12 +267,18 @@ class UpgradeManager {
     return {
       type: upgradeType,
       level: level,
+      levelCap: levelCap,
+      isMaxed: isMaxed,
       cost: cost,
-      costFormatted: formatNumber(cost),
+      costFormatted: isMaxed ? "MAXED" : formatNumber(cost),
       canAfford: canAfford,
       effectPercent: effectPercent,
       name: this.getUpgradeName(upgradeType),
-      description: this.getUpgradeDescription(upgradeType, effectPercent),
+      description: this.getUpgradeDescription(
+        upgradeType,
+        effectPercent,
+        isMaxed
+      ),
     };
   }
 
@@ -228,7 +292,11 @@ class UpgradeManager {
     return names[upgradeType] || upgradeType;
   }
 
-  getUpgradeDescription(upgradeType, effectPercent) {
+  getUpgradeDescription(upgradeType, effectPercent, isMaxed) {
+    if (isMaxed) {
+      return "Maximum level reached";
+    }
+
     const descriptions = {
       fireRate: `+${effectPercent}% faster firing`,
       size: `+${effectPercent}% larger cannonballs`,

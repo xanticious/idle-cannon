@@ -13,6 +13,7 @@ class Game {
     this.cannon = null;
     this.castle = null;
     this.upgradeManager = null;
+    this.worldManager = null;
     this.ui = null;
 
     // Cannon pause system
@@ -36,9 +37,15 @@ class Game {
     this.physics = new PhysicsWorld();
     this.particles = new ParticleSystem();
     this.upgradeManager = new UpgradeManager();
-    this.ui = new UIManager(this.upgradeManager, (upgradeType) =>
-      this.onUpgradePurchased(upgradeType)
+    this.worldManager = new WorldManager();
+    this.ui = new UIManager(
+      this.upgradeManager,
+      this.worldManager,
+      (upgradeType) => this.onUpgradePurchased(upgradeType)
     );
+
+    // Apply world settings immediately
+    this.worldManager.applyWorldSettings(this.physics);
 
     // Create game objects
     this.cannon = new Cannon(
@@ -135,16 +142,24 @@ class Game {
       this.cannonPaused = true;
       this.pauseStartTime = Date.now();
 
-      // Award money
-      const reward = this.castle.getReward();
-      this.upgradeManager.earnMoney(reward);
+      // Award money (with streak multiplier)
+      const baseReward = this.castle.getReward();
+      const finalReward = this.upgradeManager.earnMoney(baseReward);
+
+      // Update world progress
+      this.worldManager.onCastleDestroyed();
+
+      // Check for world completion
+      if (this.worldManager.checkWorldCompletion(this.upgradeManager)) {
+        this.showWorldCompletionDialog();
+      }
 
       // Show money earned effect
       const canvasPos = this.ui.getCanvasPosition(
         this.castle.x,
         this.castle.y - 100
       );
-      this.ui.showMoneyEarned(reward, canvasPos.x, canvasPos.y);
+      this.ui.showMoneyEarned(finalReward, canvasPos.x, canvasPos.y);
     }
   }
 
@@ -176,6 +191,56 @@ class Game {
       this.physics,
       this.particles
     );
+  }
+
+  showWorldCompletionDialog() {
+    if (!this.worldManager.canProgressToNextWorld()) {
+      return;
+    }
+
+    const currentWorld = this.worldManager.getCurrentWorld();
+    const nextWorldId = this.worldManager.currentWorldId + 1;
+    const nextWorld = CONFIG.WORLDS.find((w) => w.id === nextWorldId);
+
+    if (!nextWorld) {
+      // All worlds completed
+      alert(
+        "Congratulations! You've completed all worlds!\n\nPrestige system coming soon..."
+      );
+      return;
+    }
+
+    const message = `🎉 Congratulations! 🎉\n\nWorld ${currentWorld.id}: ${currentWorld.name} Complete!\n\nReady to continue to World ${nextWorld.id}: ${nextWorld.name}?\n\n⚠️ Your upgrades will reset to level 0`;
+
+    if (confirm(message)) {
+      this.progressToNextWorld();
+    }
+  }
+
+  progressToNextWorld() {
+    const success = this.worldManager.progressToNextWorld(
+      this.upgradeManager,
+      this.physics
+    );
+    if (success) {
+      // Apply upgrades to cannon
+      this.applyUpgradesToCannon();
+
+      // Update UI
+      this.ui.updateStats();
+      this.ui.updateAllUpgradeCards();
+
+      // Show success message
+      const newWorld = this.worldManager.getCurrentWorld();
+      this.ui.showNotification(
+        `Welcome to World ${newWorld.id}: ${newWorld.name}!`,
+        "success"
+      );
+
+      console.log(
+        `Progressed to World ${newWorld.id}: ${newWorld.name} (Gravity: ${newWorld.gravity})`
+      );
+    }
   }
 
   addCannonballTrails() {
