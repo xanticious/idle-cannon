@@ -38,7 +38,8 @@ class PhysicsWorld {
       friction: 0.5,
       frictionAir: 0.01,
       frictionStatic: 0.5,
-      render: { fillStyle: '#2F2F2F' },
+      render: { fillStyle: "#2F2F2F" },
+      label: "cannonball",
     });
 
     // Set initial velocity
@@ -137,6 +138,19 @@ class PhysicsWorld {
     this.cannonballs = [];
   }
 
+  removeBody(body) {
+    // Remove a specific body from the physics world
+    Matter.World.remove(this.world, body);
+
+    // Also remove from cannonballs array if it's a cannonball
+    const cannonballIndex = this.cannonballs.findIndex(
+      (cb) => cb.body === body
+    );
+    if (cannonballIndex > -1) {
+      this.cannonballs.splice(cannonballIndex, 1);
+    }
+  }
+
   // Check for collisions between cannonballs and blocks
   checkCollisions() {
     const collisions = [];
@@ -185,10 +199,10 @@ class PhysicsWorld {
       ctx.rotate(body.angle);
 
       // Set fill style
-      ctx.fillStyle = body.render.fillStyle || '#888';
+      ctx.fillStyle = body.render.fillStyle || "#888";
 
       // Draw based on body type
-      if (body.label === 'Circle Body') {
+      if (body.label === "Circle Body") {
         ctx.beginPath();
         ctx.arc(0, 0, body.circleRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -212,7 +226,7 @@ class PhysicsWorld {
 
           // Add stroke for blocks
           if (this.blocks.includes(body)) {
-            ctx.strokeStyle = '#000';
+            ctx.strokeStyle = "#000";
             ctx.lineWidth = 1;
             ctx.stroke();
           }

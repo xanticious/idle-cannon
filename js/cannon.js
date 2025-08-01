@@ -3,7 +3,7 @@ import {
   calculateLaunchAngles,
   calculateTrajectoryPoints,
   getBarrelEndPosition,
-} from './trajectoryUtils.js';
+} from "./trajectoryUtils.js";
 
 class Cannon {
   constructor(x, y, physicsWorld, particleSystem) {
@@ -60,13 +60,13 @@ class Cannon {
     // Check if we can fire
     const now = Date.now();
     if (now - this.lastShot >= this.getFireRate()) {
-      this.fire(targetBricks);
+      this.fire(targetBricks, false);
       this.lastShot = now;
       this.justFired = true;
     }
   }
 
-  fire(targetBricks = []) {
+  fire(targetBricks = [], forceFire = false) {
     let targetAngle;
 
     // If we have brick targets, calculate smart targeting
@@ -76,7 +76,7 @@ class Cannon {
       // Fallback to random angle if no targets
       targetAngle = -45 * (Math.PI / 180); // -30 degrees
 
-      if (window.location.search.includes('debug')) {
+      if (window.location.search.includes("debug")) {
         console.log(
           `No targets found, firing at fallback angle: ${(
             (targetAngle * 180) /
@@ -84,6 +84,11 @@ class Cannon {
           ).toFixed(1)}°`
         );
       }
+    }
+
+    // For forced firing (like in table building), use the current cannon angle
+    if (forceFire) {
+      targetAngle = this.angle;
     }
 
     // Create cannonball at barrel end
@@ -147,13 +152,13 @@ class Cannon {
       frictionAir: 0.01, // Match Matter.js default air resistance
     });
 
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       if (angles) {
         console.log(
           `Found ${angles.length} valid angles for target (${endX.toFixed(
             1
           )}, ${endY.toFixed(1)}):`,
-          angles.map((a) => ((a * 180) / Math.PI).toFixed(1) + '°').join(', ')
+          angles.map((a) => ((a * 180) / Math.PI).toFixed(1) + "°").join(", ")
         );
       } else {
         console.log(
@@ -171,7 +176,7 @@ class Cannon {
     const allowedAngles = new Set();
 
     // Clear previous debug info
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       this.debugInfo.targetBricks = [];
       this.debugInfo.calculatedTrajectories = [];
     }
@@ -202,7 +207,7 @@ class Cannon {
       }
 
       // Store debug info for ALL bricks (whether angles found or not)
-      if (window.location.search.includes('debug')) {
+      if (window.location.search.includes("debug")) {
         const dx = x - this.x;
         const dy = y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -222,7 +227,7 @@ class Cannon {
             speed: projectileSpeed,
             gravity,
             speedSquared: projectileSpeed * projectileSpeed,
-            discriminant: angles ? 'found solutions' : 'no solutions',
+            discriminant: angles ? "found solutions" : "no solutions",
           },
         });
 
@@ -261,7 +266,7 @@ class Cannon {
       }
     });
 
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       this.debugInfo.validAngles = Array.from(allowedAngles);
       this.debugInfo.lastCalculation = Date.now();
     }
@@ -308,14 +313,14 @@ class Cannon {
     const speedInPixelsPerSecond = averageSpeed * 60;
 
     // Debug logging
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       console.log(
         `Smart targeting: ${targetBricks.length} bricks, Matter gravity: ${matterGravity}, Physics gravity: ${gravity}`
       );
     }
 
     // Clear previous debug info
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       this.debugInfo.targetBricks = [];
       this.debugInfo.calculatedTrajectories = [];
       this.debugInfo.validAngles = [];
@@ -356,7 +361,7 @@ class Cannon {
       const randomIndex = Math.floor(Math.random() * allValidAngles.length);
       targetAngle = allValidAngles[randomIndex];
 
-      if (window.location.search.includes('debug')) {
+      if (window.location.search.includes("debug")) {
         console.log(
           `Final angle: ${((targetAngle * 180) / Math.PI).toFixed(1)}°`
         );
@@ -388,7 +393,7 @@ class Cannon {
     ctx.translate(-recoilOffset, 0);
 
     // Draw cannon base (wheels)
-    ctx.fillStyle = '#654321';
+    ctx.fillStyle = "#654321";
     ctx.beginPath();
     ctx.arc(-15, 15, 12, 0, Math.PI * 2);
     ctx.arc(15, 15, 12, 0, Math.PI * 2);
@@ -404,7 +409,7 @@ class Cannon {
     ctx.fillRect(0, -6, this.barrelLength, 12);
 
     // Draw barrel end highlight
-    ctx.fillStyle = '#1a1a1a';
+    ctx.fillStyle = "#1a1a1a";
     ctx.beginPath();
     ctx.arc(this.barrelLength, 0, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -412,11 +417,11 @@ class Cannon {
     ctx.restore();
 
     // Draw cannon details
-    ctx.fillStyle = '#8B4513';
+    ctx.fillStyle = "#8B4513";
     ctx.fillRect(-20, -10, 40, 20);
 
     // Draw straps/bands
-    ctx.strokeStyle = '#2F2F2F';
+    ctx.strokeStyle = "#2F2F2F";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-25, -8);
@@ -432,7 +437,7 @@ class Cannon {
 
   // Debug rendering method
   renderDebug(ctx, worldOffsetX = 0, worldOffsetY = 0) {
-    if (!window.location.search.includes('debug')) {
+    if (!window.location.search.includes("debug")) {
       return;
     }
 
@@ -458,11 +463,11 @@ class Cannon {
       ctx.strokeStyle = angles
         ? validAngle > CONFIG.CANNON.MIN_ANGLE &&
           validAngle < CONFIG.CANNON.MAX_ANGLE
-          ? '#00FF00'
-          : '#FFFF00'
+          ? "#00FF00"
+          : "#FFFF00"
         : reachable
-        ? '#FF4444'
-        : '#FF0000';
+        ? "#FF4444"
+        : "#FF0000";
       ctx.lineWidth = 2;
       ctx.globalAlpha = 1.0;
 
@@ -481,7 +486,7 @@ class Cannon {
 
       // Draw distance and angle info
       ctx.fillStyle = ctx.strokeStyle;
-      ctx.font = '12px Arial';
+      ctx.font = "12px Arial";
       ctx.globalAlpha = 1.0;
       if (angles && validAngle !== null) {
         ctx.fillText(
@@ -538,7 +543,7 @@ class Cannon {
 
         if (trajectoryPoints.length > 1) {
           // Draw trajectory parabola
-          ctx.strokeStyle = '#00FFFF';
+          ctx.strokeStyle = "#00FFFF";
           ctx.lineWidth = 3;
           ctx.globalAlpha = 1.0;
           ctx.setLineDash([]);
@@ -561,7 +566,7 @@ class Cannon {
           ctx.stroke();
 
           // Draw dots at key trajectory points
-          ctx.fillStyle = '#00FFFF';
+          ctx.fillStyle = "#00FFFF";
           trajectoryPoints.forEach(({ x: trajX, y: trajY }, index) => {
             if (index % 3 === 0) {
               // Every 3rd point
@@ -596,8 +601,8 @@ class Cannon {
       `Target Bricks: ${this.debugInfo.targetBricks.length}`,
       `Selected: ${
         this.debugInfo.selectedAngle
-          ? ((this.debugInfo.selectedAngle * 180) / Math.PI).toFixed(1) + '°'
-          : 'None'
+          ? ((this.debugInfo.selectedAngle * 180) / Math.PI).toFixed(1) + "°"
+          : "None"
       }`,
       `Matter Gravity: ${matterGravity.toFixed(3)}`,
       `Physics Gravity: ${gravity.toFixed(1)}`,
@@ -615,17 +620,17 @@ class Cannon {
         `First Brick: (${firstBrick.x.toFixed(0)}, ${firstBrick.y.toFixed(0)})`
       );
       debugText.push(`Distance: ${firstBrick.distance.toFixed(0)}px`);
-      debugText.push(`Reachable: ${firstBrick.reachable ? 'Yes' : 'No'}`);
-      debugText.push(`Has Solution: ${firstBrick.angles ? 'Yes' : 'No'}`);
+      debugText.push(`Reachable: ${firstBrick.reachable ? "Yes" : "No"}`);
+      debugText.push(`Has Solution: ${firstBrick.angles ? "Yes" : "No"}`);
     }
 
     // Draw background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
     ctx.fillRect(5, 200, 280, debugText.length * 15 + 10);
 
     // Draw text
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '12px Arial';
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "12px Arial";
     debugText.forEach((text, index) => {
       ctx.fillText(text, 10, 220 + index * 15);
     });

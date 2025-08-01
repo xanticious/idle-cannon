@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firing Table Test</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        border: 1px solid #ccc;
+        background: linear-gradient(to bottom, #87ceeb 0%, #32cd32 80%);
+      }
+      #console {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 5px;
+        font-family: monospace;
+        height: 200px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Firing Table Builder Test</h1>
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    <div id="console"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/worldManager.js"></script>
+    <script src="js/firingTableBuilder.js"></script>
+
+    <script>
+      // Override console.log to show in page
+      const consoleDiv = document.getElementById("console");
+      const originalLog = console.log;
+      console.log = function (...args) {
+        originalLog.apply(console, args);
+        const message = args.join(" ");
+        consoleDiv.innerHTML += message + "<br>";
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+      };
+
+      // Override URL to simulate the build table mode
+      const originalURL = window.location;
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalURL,
+          search: "?buildTable=true&world=1",
+        },
+        writable: true,
+      });
+
+      console.log("Starting test...");
+
+      // Initialize basic systems
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      console.log("Canvas initialized:", canvas.width, "x", canvas.height);
+
+      const physics = new PhysicsWorld();
+      const particles = new ParticleSystem();
+      const worldManager = new WorldManager();
+
+      console.log("Build table mode:", worldManager.buildTableMode);
+      console.log("Current world:", worldManager.currentWorldId);
+
+      // Create a simple cannon object for testing
+      const cannon = {
+        x: CONFIG.CANNON.X,
+        y: CONFIG.CANNON.Y,
+        angle: 0,
+        fire: function (targetBricks = [], forceFire = false) {
+          console.log(
+            "Firing cannon at angle:",
+            (this.angle * 180) / Math.PI,
+            "degrees"
+          );
+
+          // Calculate velocity
+          const velocity = {
+            x: Math.cos(-this.angle) * CONFIG.CANNON.SPEED,
+            y: Math.sin(-this.angle) * CONFIG.CANNON.SPEED,
+          };
+
+          // Create cannonball
+          physics.createCannonball(
+            this.x + Math.cos(-this.angle) * 40,
+            this.y + Math.sin(-this.angle) * 40,
+            8,
+            1.0,
+            velocity
+          );
+        },
+      };
+
+      // Test the firing table builder
+      const builder = new FiringTableBuilder(
+        canvas,
+        ctx,
+        physics,
+        cannon,
+        worldManager
+      );
+
+      console.log("Firing table builder created");
+      console.log("Total dots:", builder.dots.length);
+
+      // Start building after a short delay
+      setTimeout(() => {
+        console.log("Starting build process...");
+        builder.startBuilding();
+      }, 1000);
+
+      // Simple render loop
+      function gameLoop() {
+        // Clear canvas
+        ctx.fillStyle = "#87ceeb";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Update physics
+        physics.update();
+
+        // Update builder
+        builder.update();
+
+        // Render physics
+        physics.render(ctx);
+
+        // Render builder
+        builder.render();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      gameLoop();
+    </script>
+  </body>
+</html>

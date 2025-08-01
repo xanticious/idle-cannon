@@ -5,12 +5,16 @@ class WorldManager {
     this.currentWorldId = 1;
     this.castlesDestroyedInCurrentWorld = 0;
     this.isReadyForNextWorld = false;
+    this.buildTableMode = false;
 
     // Load saved data if available
     this.loadProgress();
 
     // Check for world parameter in URL
     this.checkWorldParameter();
+
+    // Check for buildTable parameter
+    this.checkBuildTableParameter();
   }
 
   checkWorldParameter() {
@@ -24,6 +28,15 @@ class WorldManager {
           `Debug: Switched to World ${worldId}: ${this.getCurrentWorld().name}`
         );
       }
+    }
+  }
+
+  checkBuildTableParameter() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const buildTableParam = urlParams.get("buildTable");
+    if (buildTableParam === "true") {
+      this.buildTableMode = true;
+      console.log("Debug: Entering firing table build mode");
     }
   }
 

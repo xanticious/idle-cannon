@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Firing Table Test</title>
+    <style>
+      canvas {
+        border: 1px solid #ccc;
+      }
+      #log {
+        margin-top: 10px;
+        height: 300px;
+        overflow-y: auto;
+        background: #f0f0f0;
+        padding: 10px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Firing Table Test</h1>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="log"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>
+      const log = document.getElementById("log");
+      function logMessage(msg) {
+        console.log(msg);
+        log.innerHTML += msg + "<br>";
+        log.scrollTop = log.scrollHeight;
+      }
+
+      logMessage("Starting simple firing table test...");
+
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+
+      // Create Matter.js engine
+      const engine = Matter.Engine.create();
+      const world = engine.world;
+      engine.world.gravity.y = 1.0;
+
+      // Create ground
+      const ground = Matter.Bodies.rectangle(400, 590, 800, 20, {
+        isStatic: true,
+      });
+      Matter.World.add(world, ground);
+
+      // Grid settings
+      const gridSize = 20;
+      const dots = [];
+      const hitDots = new Set();
+
+      // Create dot grid
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        for (let y = 0; y < canvas.height; y += gridSize) {
+          dots.push({ x, y, hit: false });
+        }
+      }
+
+      logMessage(`Created ${dots.length} dots`);
+
+      // Cannon settings
+      const cannon = {
+        x: 100,
+        y: 500,
+        angle: 0,
+      };
+
+      let currentAngle = 0;
+      let currentCannonball = null;
+      let isWaiting = false;
+      let testStartTime = 0;
+      let firingTable = {};
+
+      function fire(angle) {
+        // Convert to radians
+        const angleRad = (angle * Math.PI) / 180;
+
+        // Calculate position
+        const x = cannon.x + Math.cos(-angleRad) * 40;
+        const y = cannon.y + Math.sin(-angleRad) * 40;
+
+        // Calculate velocity
+        const speed = 20;
+        const velocity = {
+          x: Math.cos(-angleRad) * speed,
+          y: Math.sin(-angleRad) * speed,
+        };
+
+        // Create cannonball
+        const cannonball = Matter.Bodies.circle(x, y, 8, {
+          density: 0.01,
+          restitution: 0.3,
+          friction: 0.5,
+          frictionAir: 0.01,
+          render: { fillStyle: "#ff0000" },
+          label: "cannonball",
+        });
+
+        Matter.Body.setVelocity(cannonball, velocity);
+        Matter.World.add(world, cannonball);
+
+        logMessage(
+          `Fired at ${angle}° - Ball at (${x.toFixed(1)}, ${y.toFixed(1)})`
+        );
+        return cannonball;
+      }
+
+      function checkCollisions() {
+        if (!currentCannonball) return;
+
+        const ballX = currentCannonball.position.x;
+        const ballY = currentCannonball.position.y;
+        const ballRadius = 8;
+
+        dots.forEach((dot, index) => {
+          if (!dot.hit) {
+            const distance = Math.sqrt(
+              Math.pow(ballX - dot.x, 2) + Math.pow(ballY - dot.y, 2)
+            );
+
+            if (distance <= ballRadius + 2) {
+              dot.hit = true;
+              hitDots.add(index);
+            }
+          }
+        });
+      }
+
+      function recordHits() {
+        logMessage(`Recording ${hitDots.size} hits for angle ${currentAngle}°`);
+        hitDots.forEach((dotIndex) => {
+          const dot = dots[dotIndex];
+          if (dot.hit) {
+            const gridX = Math.round(dot.x / gridSize) * gridSize;
+            const gridY = Math.round(dot.y / gridSize) * gridSize;
+
+            if (!firingTable[gridX]) firingTable[gridX] = {};
+            if (!firingTable[gridX][gridY]) firingTable[gridX][gridY] = [];
+
+            if (!firingTable[gridX][gridY].includes(currentAngle)) {
+              firingTable[gridX][gridY].push(currentAngle);
+            }
+          }
+        });
+      }
+
+      function testNextAngle() {
+        if (currentAngle >= 45) {
+          // Test just first 45 degrees for demo
+          logMessage("Test complete! Check console for firing table.");
+          console.log("Firing Table:", firingTable);
+          return;
+        }
+
+        // Clear previous hits
+        hitDots.clear();
+        dots.forEach((dot) => (dot.hit = false));
+
+        // Fire at current angle
+        currentCannonball = fire(currentAngle);
+        isWaiting = true;
+        testStartTime = Date.now();
+
+        currentAngle += 5; // Test every 5 degrees
+      }
+
+      function update() {
+        // Update physics
+        Matter.Engine.update(engine, 16);
+
+        if (isWaiting && currentCannonball) {
+          // Check if ball has settled
+          const isAtRest =
+            Math.abs(currentCannonball.velocity.x) < 0.1 &&
+            Math.abs(currentCannonball.velocity.y) < 0.1;
+          const isOffScreen = currentCannonball.position.y > canvas.height + 50;
+          const timeExpired = Date.now() - testStartTime > 5000;
+
+          if (isAtRest || isOffScreen || timeExpired) {
+            recordHits();
+            Matter.World.remove(world, currentCannonball);
+            currentCannonball = null;
+            isWaiting = false;
+            setTimeout(testNextAngle, 500); // Small delay between tests
+          } else {
+            checkCollisions();
+          }
+        }
+      }
+
+      function render() {
+        // Clear canvas
+        ctx.fillStyle = "#87ceeb";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw ground
+        ctx.fillStyle = "#32cd32";
+        ctx.fillRect(0, 580, canvas.width, 20);
+
+        // Draw cannon
+        ctx.fillStyle = "#333";
+        ctx.fillRect(cannon.x - 20, cannon.y - 10, 40, 20);
+
+        // Draw dots
+        dots.forEach((dot) => {
+          ctx.fillStyle = dot.hit ? "#00ff00" : "#cccccc";
+          ctx.beginPath();
+          ctx.arc(dot.x, dot.y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Draw physics bodies
+        const bodies = Matter.Composite.allBodies(world);
+        bodies.forEach((body) => {
+          if (body.label === "cannonball") {
+            ctx.fillStyle = "#ff0000";
+            ctx.beginPath();
+            ctx.arc(body.position.x, body.position.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+
+        // Draw status
+        if (isWaiting) {
+          ctx.fillStyle = "rgba(0,0,0,0.8)";
+          ctx.fillRect(10, 10, 200, 50);
+          ctx.fillStyle = "white";
+          ctx.font = "14px Arial";
+          ctx.fillText(`Testing angle: ${currentAngle - 5}°`, 20, 30);
+          ctx.fillText(`Hits: ${hitDots.size}`, 20, 50);
+        }
+      }
+
+      function gameLoop() {
+        update();
+        render();
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Start test
+      logMessage("Starting test in 2 seconds...");
+      setTimeout(() => {
+        logMessage("Beginning angle tests...");
+        testNextAngle();
+      }, 2000);
+
+      gameLoop();
+    </script>
+  </body>
+</html>
