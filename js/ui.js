@@ -21,10 +21,11 @@ class UIManager {
       showHudButton: document.getElementById("showHudButton"),
       moneyAmount: document.getElementById("moneyAmount"),
       totalEarned: document.getElementById("totalEarned"),
-      incomeRate: document.getElementById("incomeRate"),
+      streakMultiplier: document.getElementById("streakMultiplier"),
       castlesDestroyed: document.getElementById("castlesDestroyed"),
       upgradesContainer: document.getElementById("upgradesContainer"),
       resetProgress: document.getElementById("resetProgress"),
+      worldName: document.getElementById("worldName"),
     };
   }
 
@@ -162,13 +163,16 @@ class UIManager {
     // Update money and stats
     this.elements.moneyAmount.textContent = displayValues.money;
     this.elements.totalEarned.textContent = displayValues.totalEarned;
-    this.elements.incomeRate.textContent = displayValues.incomeRate;
     this.elements.castlesDestroyed.textContent = displayValues.castlesDestroyed;
 
-    // Update money streak multiplier display if element exists
-    if (this.elements.streakMultiplier) {
-      const streak = this.upgradeManager.getStreakProgress();
-      this.elements.streakMultiplier.textContent = `${streak.multiplier}x`;
+    // Update money streak multiplier display
+    const streak = this.upgradeManager.getStreakProgress();
+    this.elements.streakMultiplier.textContent = `${streak.multiplier}`;
+
+    // Update world name display
+    if (this.worldManager && this.elements.worldName) {
+      this.elements.worldName.textContent =
+        this.worldManager.getWorldProgressText();
     }
 
     // Update world progression display if element exists

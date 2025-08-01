@@ -128,8 +128,11 @@ class Game {
       }
     }
 
-    // Update cannon (pass pause state)
-    this.cannon.update(deltaTime, this.cannonPaused);
+    // Get target brick positions from castle
+    const targetBricks = this.getTargetBricks();
+
+    // Update cannon (pass pause state and target bricks)
+    this.cannon.update(deltaTime, this.cannonPaused, targetBricks);
 
     // Update castle
     this.castle.update(deltaTime);
@@ -243,6 +246,24 @@ class Game {
     }
   }
 
+  getTargetBricks() {
+    // Extract brick positions from castle for targeting
+    const targetBricks = [];
+
+    if (this.castle && this.castle.blocks) {
+      for (const block of this.castle.blocks) {
+        if (!block.isDestroyed && block.body && block.body.position) {
+          targetBricks.push({
+            x: block.body.position.x,
+            y: block.body.position.y,
+          });
+        }
+      }
+    }
+
+    return targetBricks;
+  }
+
   addCannonballTrails() {
     // Add smoke trails to moving cannonballs
     for (const cannonballData of this.physics.cannonballs) {
@@ -273,6 +294,11 @@ class Game {
     this.cannon.render(this.ctx);
     this.castle.render(this.ctx);
 
+    // Render cannon debug visualization
+    if (window.location.search.includes("debug")) {
+      this.cannon.renderDebug(this.ctx, 0, 0);
+    }
+
     // Render particles
     this.particles.render(this.ctx);
 
@@ -286,16 +312,16 @@ class Game {
   }
 
   clearCanvas() {
-    // Sky gradient background
+    // Sky gradient background using world-specific colors
     const gradient = this.ctx.createLinearGradient(
       0,
       0,
       0,
       CONFIG.CANVAS.HEIGHT
     );
-    gradient.addColorStop(0, "#87CEEB");
-    gradient.addColorStop(0.7, "#B0E0E6");
-    gradient.addColorStop(1, "#32CD32");
+    gradient.addColorStop(0, CONFIG.COLORS.SKY);
+    gradient.addColorStop(0.7, CONFIG.COLORS.SKY);
+    gradient.addColorStop(1, CONFIG.COLORS.GRASS);
 
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, CONFIG.CANVAS.WIDTH, CONFIG.CANVAS.HEIGHT);

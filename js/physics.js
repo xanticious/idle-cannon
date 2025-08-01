@@ -87,7 +87,7 @@ class PhysicsWorld {
 
   cleanupCannonballs() {
     const now = Date.now();
-    const maxAge = 4000; // 4 seconds
+    const maxAge = 10000; // 10 seconds
     const minVelocity = 0.5; // Velocity threshold to consider "stopped"
 
     for (let i = this.cannonballs.length - 1; i >= 0; i--) {

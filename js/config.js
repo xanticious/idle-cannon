@@ -9,16 +9,13 @@ const CONFIG = {
     X: 120,
     Y: 475,
     BASE_FIRE_RATE: 3000, // ms between shots
-    BASE_SPEED: 19, // Keep this at 19 for an entertaining slow initial cannonball.
     BASE_SIZE: 8,
-    BASE_WEIGHT: 0.75,
-    MIN_ANGLE: (Math.PI * 5) / 180, // 5 degrees
-    MAX_ANGLE: (Math.PI * 55) / 180, // 55 degrees
-    // Randomization ranges
-    SPEED_MIN: 15,
-    SPEED_MAX: 25,
-    WEIGHT_MIN: 0.6,
-    WEIGHT_MAX: 1.0,
+    SPEED: 20,
+    SPEED_MIN: 20,
+    SPEED_MAX: 20,
+    WEIGHT: 1.0,
+    MIN_ANGLE: -10, // -10 degrees
+    MAX_ANGLE: Math.PI / 2, // 90 degrees
   },
 
   CASTLE: {

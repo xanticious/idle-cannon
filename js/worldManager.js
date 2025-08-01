@@ -104,6 +104,20 @@ class WorldManager {
     CONFIG.COLORS.GRASS = colors.grass;
     CONFIG.COLORS.WOOD = colors.wood;
     CONFIG.COLORS.STONE = colors.stone;
+
+    // Update HTML body and canvas background to match world theme
+    this.updateHTMLBackground(colors);
+  }
+
+  updateHTMLBackground(colors) {
+    // Update body background gradient
+    document.body.style.background = `linear-gradient(to bottom, ${colors.sky} 0%, ${colors.grass} 100%)`;
+
+    // Update canvas background gradient
+    const canvas = document.getElementById("gameCanvas");
+    if (canvas) {
+      canvas.style.background = `linear-gradient(to bottom, ${colors.sky} 0%, ${colors.grass} 80%)`;
+    }
   }
 
   getWorldProgressText() {
