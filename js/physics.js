@@ -36,7 +36,9 @@ class PhysicsWorld {
       density: mass / (Math.PI * radius * radius),
       restitution: 0.3,
       friction: 0.5,
-      render: { fillStyle: "#2F2F2F" },
+      frictionAir: 0.01,
+      frictionStatic: 0.5,
+      render: { fillStyle: '#2F2F2F' },
     });
 
     // Set initial velocity
@@ -183,10 +185,10 @@ class PhysicsWorld {
       ctx.rotate(body.angle);
 
       // Set fill style
-      ctx.fillStyle = body.render.fillStyle || "#888";
+      ctx.fillStyle = body.render.fillStyle || '#888';
 
       // Draw based on body type
-      if (body.label === "Circle Body") {
+      if (body.label === 'Circle Body') {
         ctx.beginPath();
         ctx.arc(0, 0, body.circleRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -210,7 +212,7 @@ class PhysicsWorld {
 
           // Add stroke for blocks
           if (this.blocks.includes(body)) {
-            ctx.strokeStyle = "#000";
+            ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             ctx.stroke();
           }

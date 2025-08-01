@@ -1,4 +1,5 @@
 // Main game class and initialization
+import Cannon from './cannon.js';
 
 class Game {
   constructor() {
@@ -30,8 +31,8 @@ class Game {
 
   init() {
     // Get canvas and context
-    this.canvas = document.getElementById("gameCanvas");
-    this.ctx = this.canvas.getContext("2d");
+    this.canvas = document.getElementById('gameCanvas');
+    this.ctx = this.canvas.getContext('2d');
 
     // Initialize game systems
     this.physics = new PhysicsWorld();
@@ -71,7 +72,7 @@ class Game {
     // Start game loop
     this.gameLoop();
 
-    console.log("Idle Cannon Game Initialized!");
+    console.log('Idle Cannon Game Initialized!');
   }
 
   applyUpgradesToCannon() {
@@ -237,7 +238,7 @@ class Game {
       const newWorld = this.worldManager.getCurrentWorld();
       this.ui.showNotification(
         `Welcome to World ${newWorld.id}: ${newWorld.name}!`,
-        "success"
+        'success'
       );
 
       console.log(
@@ -295,7 +296,7 @@ class Game {
     this.castle.render(this.ctx);
 
     // Render cannon debug visualization
-    if (window.location.search.includes("debug")) {
+    if (window.location.search.includes('debug')) {
       this.cannon.renderDebug(this.ctx, 0, 0);
     }
 
@@ -306,7 +307,7 @@ class Game {
     this.renderCannonPauseIndicator();
 
     // Debug info (optional) - rendered without world offset
-    if (window.location.search.includes("debug")) {
+    if (window.location.search.includes('debug')) {
       this.renderDebugInfo();
     }
   }
@@ -338,7 +339,7 @@ class Game {
     );
 
     // Add some grass texture
-    this.ctx.fillStyle = "#228B22";
+    this.ctx.fillStyle = '#228B22';
     for (let x = 0; x < CONFIG.CANVAS.WIDTH; x += 20) {
       const grassHeight = Math.sin(x * 0.01) * 3 + 2;
       this.ctx.fillRect(
@@ -359,9 +360,9 @@ class Game {
       this.ctx.save();
 
       // Draw pause indicator near cannon
-      this.ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
-      this.ctx.font = "16px Arial";
-      this.ctx.textAlign = "center";
+      this.ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+      this.ctx.font = '16px Arial';
+      this.ctx.textAlign = 'center';
 
       const text = `CANNON RELOADING: ${secondsRemaining}s`;
       this.ctx.fillText(text, CONFIG.CANNON.X, CONFIG.CANNON.Y - 60);
@@ -372,7 +373,7 @@ class Game {
       const progress = Math.max(0, timeRemaining / this.pauseDuration);
 
       // Background bar
-      this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       this.ctx.fillRect(
         CONFIG.CANNON.X - barWidth / 2,
         CONFIG.CANNON.Y - 40,
@@ -381,7 +382,7 @@ class Game {
       );
 
       // Progress bar
-      this.ctx.fillStyle = "rgba(255, 100, 100, 0.9)";
+      this.ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
       this.ctx.fillRect(
         CONFIG.CANNON.X - barWidth / 2,
         CONFIG.CANNON.Y - 40,
@@ -394,8 +395,8 @@ class Game {
   }
 
   renderDebugInfo() {
-    this.ctx.fillStyle = "white";
-    this.ctx.font = "12px Arial";
+    this.ctx.fillStyle = 'white';
+    this.ctx.font = '12px Arial';
     this.ctx.fillText(`FPS: ${this.performanceMonitor.getFPS()}`, 10, 20);
     this.ctx.fillText(
       `Cannonballs: ${this.physics.cannonballs.length}`,
@@ -416,7 +417,7 @@ class Game {
 
   // Handle window resize
   handleResize() {
-    const container = document.getElementById("gameContainer");
+    const container = document.getElementById('gameContainer');
     const rect = container.getBoundingClientRect();
 
     // Maintain aspect ratio
@@ -430,8 +431,8 @@ class Game {
       newHeight = newWidth / aspectRatio;
     }
 
-    this.canvas.style.width = newWidth + "px";
-    this.canvas.style.height = newHeight + "px";
+    this.canvas.style.width = newWidth + 'px';
+    this.canvas.style.height = newHeight + 'px';
   }
 
   // Handle upgrade purchase from UI
@@ -443,17 +444,17 @@ class Game {
     // Show feedback
     this.ui.showNotification(
       `${this.upgradeManager.getUpgradeName(upgradeType)} upgraded!`,
-      "success"
+      'success'
     );
   }
 }
 
 // Initialize game when page loads
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener('DOMContentLoaded', () => {
   const game = new Game();
 
   // Handle window resize
-  window.addEventListener("resize", () => {
+  window.addEventListener('resize', () => {
     game.handleResize();
   });
 
@@ -465,7 +466,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // Handle visibility change to pause/resume
-document.addEventListener("visibilitychange", () => {
+document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     // Page is hidden, could implement pause logic here
   } else {
