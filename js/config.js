@@ -65,6 +65,7 @@ export const CONFIG = {
       id: 1,
       name: "Earth",
       gravity: 1.0,
+      speed: 20,
       colors: {
         sky: "#87CEEB",
         grass: "#32CD32",
@@ -77,6 +78,7 @@ export const CONFIG = {
       id: 2,
       name: "Moon",
       gravity: 0.17,
+      speed: 20,
       colors: {
         sky: "#1a1a1a",
         grass: "#C0C0C0",
@@ -89,6 +91,7 @@ export const CONFIG = {
       id: 3,
       name: "Mars",
       gravity: 0.38,
+      speed: 20,
       colors: {
         sky: "#CD853F",
         grass: "#B22222",
@@ -101,6 +104,7 @@ export const CONFIG = {
       id: 4,
       name: "Mercury",
       gravity: 0.38,
+      speed: 20,
       colors: {
         sky: "#2F2F2F",
         grass: "#696969",
@@ -113,6 +117,7 @@ export const CONFIG = {
       id: 5,
       name: "Venus",
       gravity: 0.9,
+      speed: 20,
       colors: {
         sky: "#FFA500",
         grass: "#FFD700",
@@ -125,6 +130,7 @@ export const CONFIG = {
       id: 6,
       name: "Jupiter",
       gravity: 2.36,
+      speed: 30,
       colors: {
         sky: "#DEB887",
         grass: "#8B4513",
@@ -137,6 +143,7 @@ export const CONFIG = {
       id: 7,
       name: "Saturn",
       gravity: 1.06,
+      speed: 20,
       colors: {
         sky: "#F4A460",
         grass: "#DAA520",
@@ -149,6 +156,7 @@ export const CONFIG = {
       id: 8,
       name: "Uranus",
       gravity: 0.89,
+      speed: 20,
       colors: {
         sky: "#4FD0E3",
         grass: "#40E0D0",
@@ -161,6 +169,7 @@ export const CONFIG = {
       id: 9,
       name: "Neptune",
       gravity: 1.13,
+      speed: 20,
       colors: {
         sky: "#4169E1",
         grass: "#1E90FF",
@@ -173,6 +182,7 @@ export const CONFIG = {
       id: 10,
       name: "Pluto",
       gravity: 0.06,
+      speed: 20,
       colors: {
         sky: "#191970",
         grass: "#B0C4DE",
@@ -185,6 +195,7 @@ export const CONFIG = {
       id: 11,
       name: "Ceres",
       gravity: 0.03,
+      speed: 20,
       colors: {
         sky: "#2F4F4F",
         grass: "#708090",

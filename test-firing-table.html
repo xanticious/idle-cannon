@@ -88,8 +88,8 @@
 
           // Calculate velocity
           const velocity = {
-            x: Math.cos(-this.angle) * CONFIG.CANNON.SPEED,
-            y: Math.sin(-this.angle) * CONFIG.CANNON.SPEED,
+            x: Math.cos(-this.angle) * worldManager.getCurrentSpeed(),
+            y: Math.sin(-this.angle) * worldManager.getCurrentSpeed(),
           };
 
           // Create cannonball

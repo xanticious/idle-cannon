@@ -56,6 +56,10 @@ class WorldManager {
     return this.getCurrentWorld().gravity;
   }
 
+  getCurrentSpeed() {
+    return this.getCurrentWorld().speed || CONFIG.CANNON.SPEED;
+  }
+
   onCastleDestroyed() {
     this.castlesDestroyedInCurrentWorld++;
     this.saveProgress();
