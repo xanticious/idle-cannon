@@ -152,6 +152,7 @@ class UpgradeManager {
       fireRate: 0,
       size: 0,
     };
+    this.money = 0; // Reset money to 0 when progressing to next world
     this.castlesDestroyedSinceLastUpgrade = 0;
     this.saveProgress();
   }

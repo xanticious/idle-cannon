@@ -39,7 +39,7 @@ class PhysicsWorld {
       friction: 0.5,
       frictionAir: 0.01,
       frictionStatic: 0.5,
-      render: { fillStyle: "#2F2F2F" },
+      render: { fillStyle: CONFIG.COLORS.CANNONBALL },
       label: "cannonball",
     });
 

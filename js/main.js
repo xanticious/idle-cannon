@@ -287,17 +287,27 @@ class Game {
 
     if (!nextWorld) {
       // All worlds completed
-      alert(
-        "Congratulations! You've completed all worlds!\n\nPrestige system coming soon..."
+      this.ui.showModal(
+        "Congratulations!",
+        "You've completed all worlds! Prestige system coming soon...",
+        "Proceed to Next Level",
+        () => {
+          // Future prestige system logic would go here
+          console.log("Prestige system not yet implemented");
+        }
       );
       return;
     }
 
-    const message = `🎉 Congratulations! 🎉\n\nWorld ${currentWorld.id}: ${currentWorld.name} Complete!\n\nReady to continue to World ${nextWorld.id}: ${nextWorld.name}?\n\n⚠️ Your upgrades will reset to level 0`;
-
-    if (confirm(message)) {
-      this.progressToNextWorld();
-    }
+    // Show progression modal
+    this.ui.showModal(
+      "Congratulations!",
+      `World ${currentWorld.id}: ${currentWorld.name} Complete!`,
+      "Proceed to Next Level",
+      () => {
+        this.progressToNextWorld();
+      }
+    );
   }
 
   progressToNextWorld() {

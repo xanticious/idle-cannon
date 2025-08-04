@@ -1,4 +1,4 @@
-// Firing Table Data for World 8
+// Firing Table Data for World 9
 // Generated placeholder data
 export default {
   0: {

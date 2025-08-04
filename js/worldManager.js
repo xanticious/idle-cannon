@@ -122,6 +122,7 @@ class WorldManager {
     CONFIG.COLORS.GRASS = colors.grass;
     CONFIG.COLORS.WOOD = colors.wood;
     CONFIG.COLORS.STONE = colors.stone;
+    CONFIG.COLORS.CANNONBALL = colors.cannonball;
 
     // Update HTML body and canvas background to match world theme
     this.updateHTMLBackground(colors);

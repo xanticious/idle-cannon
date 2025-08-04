@@ -200,6 +200,9 @@ class UIManager {
 
     // Update upgrade affordability
     this.updateAllUpgradeCards();
+
+    // Update HUD visibility (in case affordability changed)
+    this.updateHUDVisibility();
   }
 
   toggleHUD() {
@@ -212,10 +215,28 @@ class UIManager {
     this.updateHUDVisibility();
   }
 
+  // Check if any upgrade is affordable
+  canAffordAnyUpgrade() {
+    const upgradeTypes = ["fireRate", "size"];
+    return upgradeTypes.some((type) => {
+      const upgradeInfo = this.upgradeManager.getUpgradeInfo(type);
+      return upgradeInfo.canAfford && !upgradeInfo.isMaxed;
+    });
+  }
+
   updateHUDVisibility() {
     if (this.isHidden) {
       this.elements.hud.classList.add("hidden");
-      this.elements.hudToggle.textContent = "Show HUD";
+
+      // Check if any upgrade is affordable to add asterisk
+      const canAffordAny = this.canAffordAnyUpgrade();
+      this.elements.hudToggle.textContent = canAffordAny
+        ? "Show HUD*"
+        : "Show HUD";
+      this.elements.showHudButton.textContent = canAffordAny
+        ? "Show HUD*"
+        : "Show HUD";
+
       this.elements.showHudButton.classList.add("visible");
     } else {
       this.elements.hud.classList.remove("hidden");
@@ -374,6 +395,145 @@ class UIManager {
   showNotification(message, type = "info") {
     // Simple notification - could be enhanced with a proper notification system
     console.log(`[${type.toUpperCase()}] ${message}`);
+  }
+
+  // Show custom modal overlay
+  showModal(title, subtitle = "", buttonText = "Continue", onConfirm = null) {
+    // Create modal overlay
+    const overlay = document.createElement("div");
+    overlay.className = "game-modal-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      font-family: Arial, sans-serif;
+    `;
+
+    // Create modal content
+    const modal = document.createElement("div");
+    modal.className = "game-modal";
+    modal.style.cssText = `
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      border: 3px solid #f39c12;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      max-width: 500px;
+      width: 90%;
+      animation: modalSlideIn 0.3s ease-out;
+    `;
+
+    // Add CSS animation
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes modalSlideIn {
+        from {
+          transform: scale(0.8) translateY(-50px);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Create title
+    const titleElement = document.createElement("h1");
+    titleElement.textContent = title;
+    titleElement.style.cssText = `
+      color: #f39c12;
+      font-size: 2.5em;
+      margin: 0 0 20px 0;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    `;
+
+    // Create subtitle if provided
+    let subtitleElement = null;
+    if (subtitle) {
+      subtitleElement = document.createElement("p");
+      subtitleElement.textContent = subtitle;
+      subtitleElement.style.cssText = `
+        color: #ecf0f1;
+        font-size: 1.2em;
+        margin: 0 0 30px 0;
+        line-height: 1.4;
+      `;
+    }
+
+    // Create button
+    const button = document.createElement("button");
+    button.textContent = buttonText;
+    button.style.cssText = `
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 1.2em;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    `;
+
+    // Button hover effects
+    button.addEventListener("mouseenter", () => {
+      button.style.transform = "translateY(-2px)";
+      button.style.boxShadow = "0 6px 20px rgba(231, 76, 60, 0.6)";
+    });
+
+    button.addEventListener("mouseleave", () => {
+      button.style.transform = "translateY(0)";
+      button.style.boxShadow = "0 4px 15px rgba(231, 76, 60, 0.4)";
+    });
+
+    // Button click handler
+    button.addEventListener("click", () => {
+      document.body.removeChild(overlay);
+      document.head.removeChild(style);
+      if (onConfirm) {
+        onConfirm();
+      }
+    });
+
+    // Assemble modal
+    modal.appendChild(titleElement);
+    if (subtitleElement) {
+      modal.appendChild(subtitleElement);
+    }
+    modal.appendChild(button);
+    overlay.appendChild(modal);
+
+    // Add to page
+    document.body.appendChild(overlay);
+
+    // Focus the button for keyboard accessibility
+    button.focus();
+
+    // Allow ESC key to close modal
+    const handleEscape = (e) => {
+      if (e.key === "Escape") {
+        document.body.removeChild(overlay);
+        document.head.removeChild(style);
+        document.removeEventListener("keydown", handleEscape);
+        if (onConfirm) {
+          onConfirm();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
   }
 }
 
