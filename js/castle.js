@@ -1,4 +1,6 @@
 // Castle generation and management
+import { CONFIG, MATERIALS } from "./config.js";
+import { randomInt, randomFloat, randomChoice } from "./utils.js";
 
 class Block {
   constructor(x, y, material, physicsBody) {
@@ -444,3 +446,5 @@ class Castle {
     return this.reward;
   }
 }
+
+export default Castle;

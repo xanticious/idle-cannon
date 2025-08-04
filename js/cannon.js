@@ -1,4 +1,6 @@
 // Cannon class - handles firing logic and upgrades
+import { CONFIG } from "./config.js";
+import { randomFloat, toDegrees, toRadians } from "./utils.js";
 import {
   calculateLaunchAngles,
   calculateTrajectoryPoints,

@@ -1,5 +1,14 @@
 // Main game class and initialization
+import { CONFIG, GAME_STATES } from "./config.js";
+import { PerformanceMonitor } from "./utils.js";
 import Cannon from "./cannon.js";
+import Castle from "./castle.js";
+import PhysicsWorld from "./physics.js";
+import ParticleSystem from "./particles.js";
+import UpgradeManager from "./upgrades.js";
+import WorldManager from "./worldManager.js";
+import UIManager from "./ui.js";
+import FiringTableBuilder from "./firingTableBuilder.js";
 
 class Game {
   constructor() {
@@ -41,15 +50,6 @@ class Game {
     this.upgradeManager = new UpgradeManager();
     this.worldManager = new WorldManager();
 
-    // Only initialize UI if not in build table mode
-    if (!this.worldManager.buildTableMode) {
-      this.ui = new UIManager(
-        this.upgradeManager,
-        this.worldManager,
-        (upgradeType) => this.onUpgradePurchased(upgradeType)
-      );
-    }
-
     // Apply world settings immediately
     this.worldManager.applyWorldSettings(this.physics);
 
@@ -60,6 +60,16 @@ class Game {
       this.physics,
       this.particles
     );
+
+    // Only initialize UI if not in build table mode
+    if (!this.worldManager.buildTableMode) {
+      this.ui = new UIManager(
+        this.upgradeManager,
+        this.worldManager,
+        (upgradeType) => this.onUpgradePurchased(upgradeType),
+        this.cannon
+      );
+    }
 
     // Create castle only if not in build table mode
     if (!this.worldManager.buildTableMode) {

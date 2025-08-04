@@ -1,4 +1,5 @@
 // Physics wrapper and helpers using Matter.js
+import { CONFIG, MATERIALS } from "./config.js";
 
 class PhysicsWorld {
   constructor() {
@@ -237,3 +238,5 @@ class PhysicsWorld {
     }
   }
 }
+
+export default PhysicsWorld;

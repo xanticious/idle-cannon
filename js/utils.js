@@ -1,7 +1,7 @@
 // Utility Functions
 
 // Generate gaussian random number using Box-Muller transformation
-function gaussianRandom(mean = 0, sigma = 1) {
+export function gaussianRandom(mean = 0, sigma = 1) {
   let u1 = Math.random();
   let u2 = Math.random();
   let z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
@@ -9,7 +9,7 @@ function gaussianRandom(mean = 0, sigma = 1) {
 }
 
 // Format large numbers with suffixes (k, m, b, t)
-function formatNumber(num) {
+export function formatNumber(num) {
   const suffixes = ["", "k", "m", "b", "t", "q"];
   let suffixIndex = 0;
 
@@ -26,64 +26,64 @@ function formatNumber(num) {
 }
 
 // Linear interpolation
-function lerp(start, end, factor) {
+export function lerp(start, end, factor) {
   return start + (end - start) * factor;
 }
 
 // Clamp value between min and max
-function clamp(value, min, max) {
+export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
 // Distance between two points
-function distance(x1, y1, x2, y2) {
+export function distance(x1, y1, x2, y2) {
   return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 
 // Random integer between min and max (inclusive)
-function randomInt(min, max) {
+export function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 // Random float between min and max
-function randomFloat(min, max) {
+export function randomFloat(min, max) {
   return Math.random() * (max - min) + min;
 }
 
 // Angle between two points
-function angleTo(x1, y1, x2, y2) {
+export function angleTo(x1, y1, x2, y2) {
   return Math.atan2(y2 - y1, x2 - x1);
 }
 
 // Convert degrees to radians
-function toRadians(degrees) {
+export function toRadians(degrees) {
   return (degrees * Math.PI) / 180;
 }
 
 // Convert radians to degrees
-function toDegrees(radians) {
+export function toDegrees(radians) {
   return (radians * 180) / Math.PI;
 }
 
 // Simple collision detection for circles
-function circleCollision(x1, y1, r1, x2, y2, r2) {
+export function circleCollision(x1, y1, r1, x2, y2, r2) {
   return distance(x1, y1, x2, y2) < r1 + r2;
 }
 
 // Get random element from array
-function randomChoice(array) {
+export function randomChoice(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
 // Simple easing functions
-const Easing = {
+export const Easing = {
   easeInOut: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
   easeOut: (t) => t * (2 - t),
   easeIn: (t) => t * t,
 };
 
 // Color utilities
-function hexToRgb(hex) {
+export function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? {
@@ -94,12 +94,12 @@ function hexToRgb(hex) {
     : null;
 }
 
-function rgbToHex(r, g, b) {
+export function rgbToHex(r, g, b) {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
 
 // Performance utilities
-class PerformanceMonitor {
+export class PerformanceMonitor {
   constructor() {
     this.frameCount = 0;
     this.lastTime = performance.now();
@@ -125,7 +125,7 @@ class PerformanceMonitor {
 }
 
 // Object pool for performance optimization
-class ObjectPool {
+export class ObjectPool {
   constructor(createFn, resetFn) {
     this.createFn = createFn;
     this.resetFn = resetFn;

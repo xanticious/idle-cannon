@@ -1,4 +1,5 @@
 // Firing Table Builder - Creates trajectory lookup tables for each world
+import { CONFIG } from "./config.js";
 
 class FiringTableBuilder {
   constructor(canvas, ctx, physics, cannon, worldManager) {
@@ -327,3 +328,5 @@ class FiringTableBuilder {
     this.ctx.restore();
   }
 }
+
+export default FiringTableBuilder;

@@ -1,4 +1,5 @@
 // World progression system management
+import { CONFIG } from "./config.js";
 
 class WorldManager {
   constructor() {
@@ -207,3 +208,5 @@ class WorldManager {
     }
   }
 }
+
+export default WorldManager;

@@ -1,16 +1,28 @@
 // UI Management for HUD and interface
+import { formatNumber } from "./utils.js";
 
 class UIManager {
-  constructor(upgradeManager, worldManager = null, onUpgradePurchased = null) {
+  constructor(
+    upgradeManager,
+    worldManager = null,
+    onUpgradePurchased = null,
+    cannon = null
+  ) {
     this.upgradeManager = upgradeManager;
     this.worldManager = worldManager;
     this.onUpgradePurchased = onUpgradePurchased;
+    this.cannon = cannon;
     this.isHidden = false;
     this.elements = {};
 
     this.initializeElements();
     this.setupEventListeners();
     this.createUpgradeCards();
+  }
+
+  // Method to set cannon reference after it's created
+  setCannon(cannon) {
+    this.cannon = cannon;
   }
 
   initializeElements() {
@@ -347,8 +359,8 @@ class UIManager {
       this.showNotification("Progress has been reset!", "success");
 
       // Notify the game to reset cannon upgrades
-      if (window.game && window.game.cannon) {
-        window.game.cannon.upgrades = {
+      if (this.cannon) {
+        this.cannon.upgrades = {
           fireRate: 0,
           size: 0,
           speed: 0,
@@ -364,3 +376,5 @@ class UIManager {
     console.log(`[${type.toUpperCase()}] ${message}`);
   }
 }
+
+export default UIManager;

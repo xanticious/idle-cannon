@@ -1,4 +1,6 @@
 // Upgrade system and economy management
+import { CONFIG } from "./config.js";
+import { formatNumber } from "./utils.js";
 
 class UpgradeManager {
   constructor() {
@@ -306,3 +308,5 @@ class UpgradeManager {
     return descriptions[upgradeType] || "";
   }
 }
+
+export default UpgradeManager;

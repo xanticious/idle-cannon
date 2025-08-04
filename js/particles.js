@@ -1,4 +1,6 @@
 // Particle Effects System
+import { ObjectPool, randomFloat, randomChoice } from "./utils.js";
+import { MATERIALS } from "./config.js";
 
 class Particle {
   constructor(x, y, vx, vy, life, color, size = 2) {
@@ -179,3 +181,5 @@ class ParticleSystem {
     this.particles = [];
   }
 }
+
+export default ParticleSystem;

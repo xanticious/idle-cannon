@@ -1,5 +1,5 @@
 // Game Configuration Constants
-const CONFIG = {
+export const CONFIG = {
   CANVAS: {
     WIDTH: 1200,
     HEIGHT: 600,
@@ -202,13 +202,13 @@ const CONFIG = {
 };
 
 // Material types
-const MATERIALS = {
+export const MATERIALS = {
   WOOD: "wood",
   STONE: "stone",
 };
 
 // Game states
-const GAME_STATES = {
+export const GAME_STATES = {
   PLAYING: "playing",
   CASTLE_DESTROYED: "castle_destroyed",
 };
