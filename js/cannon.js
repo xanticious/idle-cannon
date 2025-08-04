@@ -1,18 +1,15 @@
 // Cannon class - handles firing logic and upgrades
 import { CONFIG } from "./config.js";
 import { randomFloat, toDegrees, toRadians } from "./utils.js";
-import {
-  calculateLaunchAngles,
-  calculateTrajectoryPoints,
-  getBarrelEndPosition,
-} from "./trajectoryUtils.js";
+import { calculateLaunchAngles } from "./trajectoryUtils.js";
 
 class Cannon {
-  constructor(x, y, physicsWorld, particleSystem) {
+  constructor(x, y, physicsWorld, particleSystem, worldManager) {
     this.x = x;
     this.y = y;
     this.physics = physicsWorld;
     this.particles = particleSystem;
+    this.worldManager = worldManager;
 
     // Firing properties
     this.fireRate = CONFIG.CANNON.BASE_FIRE_RATE;
@@ -46,9 +43,19 @@ class Cannon {
       selectedAngle: null,
       lastCalculation: 0,
     };
+
+    // No targets timeout tracking
+    this.lastTargetsFoundTime = Date.now();
+    this.noTargetsTimeout = 5000; // 5 seconds
+
+    console.log(
+      "Cannon initialized with no-targets timeout:",
+      this.noTargetsTimeout / 1000,
+      "seconds"
+    );
   }
 
-  update(deltaTime, isPaused = false, targetBricks = []) {
+  async update(deltaTime, isPaused = false, targetBricks = []) {
     // Update recoil animation (slower)
     if (this.recoil > 0) {
       this.recoil = Math.max(0, this.recoil - deltaTime * 0.003); // Slower animation
@@ -56,34 +63,55 @@ class Cannon {
 
     // Don't fire if paused
     if (isPaused) {
-      return;
+      return null;
     }
 
     // Check if we can fire
     const now = Date.now();
     if (now - this.lastShot >= this.getFireRate()) {
-      this.fire(targetBricks, false);
+      const fireResult = await this.fire(targetBricks, false);
       this.lastShot = now;
       this.justFired = true;
+
+      // Return any special signals from firing (like auto-destroy)
+      return fireResult;
     }
+
+    return null;
   }
 
-  fire(targetBricks = [], forceFire = false) {
+  async fire(targetBricks = [], forceFire = false) {
     let targetAngle;
 
     // If we have brick targets, calculate smart targeting
     if (targetBricks.length > 0) {
-      targetAngle = this.calculateSmartAngle(targetBricks);
+      // Update the time we last had targets
+      this.lastTargetsFoundTime = Date.now();
+      targetAngle = await this.calculateSmartAngle(targetBricks);
     } else {
-      // Fallback to random angle if no targets
-      targetAngle = -45 * (Math.PI / 180); // -30 degrees
+      // Check if we should auto-destroy the castle due to no targets timeout
+      const timeSinceLastTargets = Date.now() - this.lastTargetsFoundTime;
+      if (timeSinceLastTargets >= this.noTargetsTimeout) {
+        console.log(
+          `Auto-destroying castle after ${(timeSinceLastTargets / 1000).toFixed(
+            1
+          )}s of no targets`
+        );
+        // Return a special signal to indicate castle should be auto-destroyed
+        return { autoDestroyCastle: true };
+      }
+
+      // Fallback to random angle if no targets but timeout not reached
+      targetAngle = -45 * (Math.PI / 180); // -45 degrees
 
       if (window.location.search.includes("debug")) {
         console.log(
           `No targets found, firing at fallback angle: ${(
             (targetAngle * 180) /
             Math.PI
-          ).toFixed(1)}°`
+          ).toFixed(1)}° (${(timeSinceLastTargets / 1000).toFixed(
+            1
+          )}s since last targets)`
         );
       }
     }
@@ -119,6 +147,7 @@ class Cannon {
     this.justFired = true;
 
     // Smoke trail will be added in the main game loop
+    return null; // Normal firing, no special action needed
   }
 
   // Upgrade getters with bonuses applied
@@ -141,17 +170,12 @@ class Cannon {
   }
 
   // Smart targeting methods
-  calculateLaunchAnglesToHitBrick({ endX, endY, speed, gravity }) {
+  async calculateLaunchAnglesToHitBrick({ endX, endY, speed, gravity }) {
     // Use the new trajectory utility for more accurate calculations
-    const angles = calculateLaunchAngles({
-      barrelStartX: this.x,
-      barrelStartY: this.y,
-      barrelLength: this.barrelLength,
-      projectileSpeed: speed,
-      gravity: gravity,
+    const angles = await calculateLaunchAngles({
       targetX: endX,
       targetY: endY,
-      frictionAir: 0.01, // Match Matter.js default air resistance
+      world: this.worldManager.getCurrentWorld(),
     });
 
     if (window.location.search.includes("debug")) {
@@ -174,7 +198,7 @@ class Cannon {
     return angles;
   }
 
-  calculateAllowedAngles(bricks, gravity, projectileSpeed) {
+  async calculateAllowedAngles(bricks, gravity, projectileSpeed) {
     const allowedAngles = new Set();
 
     // Clear previous debug info
@@ -183,17 +207,12 @@ class Cannon {
       this.debugInfo.calculatedTrajectories = [];
     }
 
-    bricks.forEach(({ x, y }) => {
+    for (const { x, y } of bricks) {
       // Use the new trajectory utility instead of the old method
-      const angles = calculateLaunchAngles({
-        barrelStartX: this.x,
-        barrelStartY: this.y,
-        barrelLength: this.barrelLength,
-        projectileSpeed: projectileSpeed,
-        gravity: gravity,
+      const angles = await calculateLaunchAngles({
         targetX: x,
         targetY: y,
-        frictionAir: 0.01, // Match Matter.js default air resistance
+        world: this.worldManager.getCurrentWorld(),
       });
 
       if (angles) {
@@ -207,66 +226,7 @@ class Cannon {
           }
         });
       }
-
-      // Store debug info for ALL bricks (whether angles found or not)
-      if (window.location.search.includes("debug")) {
-        const dx = x - this.x;
-        const dy = y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        this.debugInfo.targetBricks.push({
-          x,
-          y,
-          angles,
-          validAngle: angles && angles.length > 0 ? angles[0] : null,
-          dx,
-          dy,
-          distance,
-          reachable: dx > 0, // Must be to the right of cannon
-          calculationData: {
-            dx,
-            dy,
-            speed: projectileSpeed,
-            gravity,
-            speedSquared: projectileSpeed * projectileSpeed,
-            discriminant: angles ? "found solutions" : "no solutions",
-          },
-        });
-
-        // Calculate trajectory points for visualization (only for valid angles)
-        if (angles && angles.length > 0) {
-          const firstAngle = angles[0];
-          if (
-            firstAngle > CONFIG.CANNON.MIN_ANGLE &&
-            firstAngle < CONFIG.CANNON.MAX_ANGLE
-          ) {
-            // Use the trajectory utility for consistent calculations
-            const barrelEnd = getBarrelEndPosition(
-              this.x,
-              this.y,
-              firstAngle,
-              this.barrelLength
-            );
-            const trajectory = calculateTrajectoryPoints(
-              barrelEnd.x,
-              barrelEnd.y,
-              firstAngle,
-              projectileSpeed,
-              gravity,
-              x + 200, // Extend beyond target
-              0.1, // Time step
-              0.01 // Air resistance to match Matter.js
-            );
-            this.debugInfo.calculatedTrajectories.push({
-              points: trajectory,
-              targetX: x,
-              targetY: y,
-              angle: firstAngle,
-            });
-          }
-        }
-      }
-    });
+    }
 
     if (window.location.search.includes("debug")) {
       this.debugInfo.validAngles = Array.from(allowedAngles);
@@ -285,22 +245,25 @@ class Cannon {
     return value + z0 * sigma;
   }
 
-  // Calculate trajectory points for debug visualization (using utility)
+  // Calculate trajectory points for debug visualization
   calculateTrajectoryPoints(startX, startY, angle, speed, gravity, maxX) {
-    // Use the imported trajectory utility for consistency
-    return calculateTrajectoryPoints(
-      startX,
-      startY,
-      angle,
-      speed,
-      gravity,
-      maxX,
-      0.1, // Time step
-      0.01 // Air resistance to match Matter.js
-    );
+    const points = [];
+    const timeStep = 0.1;
+    const airResistance = 0.01;
+
+    for (let t = 0; t <= 10; t += timeStep) {
+      const x = startX + speed * Math.cos(angle) * t;
+      const y = startY + speed * Math.sin(angle) * t + 0.5 * gravity * t * t;
+
+      if (x > maxX || y > CONFIG.CANVAS.HEIGHT) break;
+
+      points.push({ x, y });
+    }
+
+    return points;
   }
 
-  calculateSmartAngle(targetBricks) {
+  async calculateSmartAngle(targetBricks) {
     // Get current world gravity from the engine (since WorldManager updates it)
     const matterGravity = this.physics.engine.world.gravity.y;
 
@@ -331,16 +294,11 @@ class Cannon {
     const allValidAngles = [];
 
     // Use trajectory utility to calculate angles for each brick
-    targetBricks.forEach(({ x, y }) => {
-      const angles = calculateLaunchAngles({
-        barrelStartX: this.x,
-        barrelStartY: this.y,
-        barrelLength: this.barrelLength,
-        projectileSpeed: speedInPixelsPerSecond,
-        gravity: gravity,
+    for (const { x, y } of targetBricks) {
+      const angles = await calculateLaunchAngles({
         targetX: x,
         targetY: y,
-        frictionAir: 0.01, // Match Matter.js default air resistance
+        world: this.worldManager.getCurrentWorld(),
       });
 
       if (angles) {
@@ -354,7 +312,7 @@ class Cannon {
           }
         });
       }
-    });
+    }
 
     let targetAngle;
 

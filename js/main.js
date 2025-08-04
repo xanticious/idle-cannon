@@ -58,7 +58,8 @@ class Game {
       CONFIG.CANNON.X,
       CONFIG.CANNON.Y,
       this.physics,
-      this.particles
+      this.particles,
+      this.worldManager
     );
 
     // Only initialize UI if not in build table mode
@@ -79,6 +80,9 @@ class Game {
         this.physics,
         this.particles
       );
+
+      // Reset cannon's no-targets timer for initial castle
+      this.cannon.lastTargetsFoundTime = Date.now();
     }
 
     // Initialize firing table builder if in build mode
@@ -92,8 +96,8 @@ class Game {
       );
 
       // Start building immediately
-      setTimeout(() => {
-        this.firingTableBuilder.startBuilding();
+      setTimeout(async () => {
+        await this.firingTableBuilder.startBuilding();
       }, 1000); // Give a second for everything to initialize
     }
 
@@ -118,7 +122,7 @@ class Game {
     }
   }
 
-  gameLoop(currentTime = 0) {
+  async gameLoop(currentTime = 0) {
     const deltaTime = currentTime - this.lastTime;
     this.lastTime = currentTime;
 
@@ -126,7 +130,7 @@ class Game {
     this.performanceMonitor.update();
 
     // Update game based on state
-    this.update(deltaTime);
+    await this.update(deltaTime);
 
     // Render everything
     this.render();
@@ -135,7 +139,7 @@ class Game {
     requestAnimationFrame((time) => this.gameLoop(time));
   }
 
-  update(deltaTime) {
+  async update(deltaTime) {
     // Update physics
     this.physics.update();
 
@@ -150,7 +154,7 @@ class Game {
 
     switch (this.gameState) {
       case GAME_STATES.PLAYING:
-        this.updatePlaying(deltaTime);
+        await this.updatePlaying(deltaTime);
         break;
 
       case GAME_STATES.CASTLE_DESTROYED:
@@ -162,7 +166,7 @@ class Game {
     this.addCannonballTrails();
   }
 
-  updatePlaying(deltaTime) {
+  async updatePlaying(deltaTime) {
     // Check if cannon pause has expired
     if (this.cannonPaused) {
       const now = Date.now();
@@ -175,7 +179,37 @@ class Game {
     const targetBricks = this.getTargetBricks();
 
     // Update cannon (pass pause state and target bricks)
-    this.cannon.update(deltaTime, this.cannonPaused, targetBricks);
+    const cannonResult = await this.cannon.update(
+      deltaTime,
+      this.cannonPaused,
+      targetBricks
+    );
+
+    // Check if cannon signaled to auto-destroy castle
+    if (cannonResult && cannonResult.autoDestroyCastle) {
+      console.log("Auto-destroying castle after 5 seconds of no targets");
+      this.castle.isDestroyed = true;
+      this.castle.onDestroyed();
+    }
+
+    // Debug logging for timeout status
+    if (window.location.search.includes("debug")) {
+      const timeSinceLastTargets =
+        Date.now() - this.cannon.lastTargetsFoundTime;
+      const timeSinceLastDamage = Date.now() - this.castle.lastDamageTime;
+
+      // Log every 2 seconds
+      if (
+        Math.floor(timeSinceLastTargets / 2000) !==
+        Math.floor((timeSinceLastTargets - deltaTime) / 2000)
+      ) {
+        console.log(
+          `Debug timers - No targets: ${(timeSinceLastTargets / 1000).toFixed(
+            1
+          )}s, No damage: ${(timeSinceLastDamage / 1000).toFixed(1)}s`
+        );
+      }
+    }
 
     // Update castle
     this.castle.update(deltaTime);
@@ -229,6 +263,9 @@ class Game {
 
     // Clear all remaining cannonballs
     this.physics.clearAllCannonballs();
+
+    // Reset cannon's no-targets timer for new castle
+    this.cannon.lastTargetsFoundTime = Date.now();
 
     // Create new castle at original position, but high in the sky
     this.castle = new Castle(

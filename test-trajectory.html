@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firing Table Test</title>
+  </head>
+  <body>
+    <h1>Firing Table Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+      import { calculateLaunchAngles } from "./js/trajectoryUtils.js";
+
+      async function testFiringTable() {
+        const output = document.getElementById("output");
+
+        // Test World 1
+        console.log("Testing World 1...");
+        const world1 = { id: 1 };
+        const angles1 = await calculateLaunchAngles({
+          targetX: 0,
+          targetY: 0,
+          world: world1,
+        });
+
+        output.innerHTML += `<p>World 1, target (0,0): ${
+          angles1
+            ? angles1
+                .map((a) => ((a * 180) / Math.PI).toFixed(1) + "°")
+                .join(", ")
+            : "null"
+        }</p>`;
+
+        // Test World 2
+        console.log("Testing World 2...");
+        const world2 = { id: 2 };
+        const angles2 = await calculateLaunchAngles({
+          targetX: 0,
+          targetY: 0,
+          world: world2,
+        });
+
+        output.innerHTML += `<p>World 2, target (0,0): ${
+          angles2
+            ? angles2
+                .map((a) => ((a * 180) / Math.PI).toFixed(1) + "°")
+                .join(", ")
+            : "null"
+        }</p>`;
+
+        // Test invalid world
+        console.log("Testing invalid world...");
+        const worldInvalid = { id: 99 };
+        const anglesInvalid = await calculateLaunchAngles({
+          targetX: 0,
+          targetY: 0,
+          world: worldInvalid,
+        });
+
+        output.innerHTML += `<p>World 99, target (0,0): ${
+          anglesInvalid
+            ? anglesInvalid
+                .map((a) => ((a * 180) / Math.PI).toFixed(1) + "°")
+                .join(", ")
+            : "null"
+        }</p>`;
+      }
+
+      testFiringTable().catch(console.error);
+    </script>
+  </body>
+</html>

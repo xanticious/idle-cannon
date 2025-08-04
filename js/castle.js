@@ -72,6 +72,16 @@ class Castle {
     this.fadingOut = false;
     this.fadeAlpha = 1.0;
 
+    // Damage tracking for fallback destruction
+    this.lastDamageTime = Date.now();
+    this.noDamageTimeout = 20000; // 20 seconds
+
+    console.log(
+      "Castle initialized with no-damage timeout:",
+      this.noDamageTimeout / 1000,
+      "seconds"
+    );
+
     this.generate();
   }
 
@@ -169,7 +179,36 @@ class Castle {
     return Math.floor(CONFIG.CASTLE.BASE_REWARD + sizeBonus + complexityBonus);
   }
 
+  // Track when damage is taken to reset timeout
+  onDamageTaken() {
+    this.lastDamageTime = Date.now();
+  }
+
+  // Check if castle should be auto-destroyed due to no damage timeout
+  shouldAutoDestroy() {
+    const timeSinceLastDamage = Date.now() - this.lastDamageTime;
+    const shouldDestroy = timeSinceLastDamage >= this.noDamageTimeout;
+
+    if (shouldDestroy && window.location.search.includes("debug")) {
+      console.log(
+        `Castle should auto-destroy: ${(timeSinceLastDamage / 1000).toFixed(
+          1
+        )}s since last damage`
+      );
+    }
+
+    return shouldDestroy;
+  }
+
   update(deltaTime) {
+    // Check for auto-destruction due to no damage timeout
+    if (!this.isDestroyed && this.shouldAutoDestroy()) {
+      console.log("Castle auto-destroyed after 20 seconds of no damage");
+      this.isDestroyed = true;
+      this.onDestroyed();
+      return;
+    }
+
     // Update blocks
     for (const block of this.blocks) {
       block.update(deltaTime);
@@ -241,6 +280,9 @@ class Castle {
           // Apply damage
           const wasDestroyed = hitBlock.takeDamage(damage);
 
+          // Track that damage was taken
+          this.onDamageTaken();
+
           if (wasDestroyed) {
             // Create debris particles
             const pos = hitBlock.body.position;
@@ -283,6 +325,9 @@ class Castle {
         damage = Math.max(1, Math.min(3, damage)); // 1-3 damage range
 
         const wasDestroyed = block.takeDamage(damage);
+
+        // Track that damage was taken
+        this.onDamageTaken();
 
         if (wasDestroyed) {
           // Create debris particles
@@ -333,6 +378,9 @@ class Castle {
             // Apply damage to both blocks
             const blockADestroyed = blockA.takeDamage(damage);
             const blockBDestroyed = blockB.takeDamage(damage);
+
+            // Track that damage was taken
+            this.onDamageTaken();
 
             if (blockADestroyed) {
               const pos = blockA.body.position;

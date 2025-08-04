@@ -1,6 +1,9 @@
 // Firing Table Builder - Creates trajectory lookup tables for each world
 import { CONFIG } from "./config.js";
 
+// Import minimum damage velocity for accurate hit detection
+const MIN_DAMAGE_VELOCITY = 5; // From castle.js handleCollisions method
+
 class FiringTableBuilder {
   constructor(canvas, ctx, physics, cannon, worldManager) {
     this.canvas = canvas;
@@ -24,6 +27,7 @@ class FiringTableBuilder {
     this.firingTable = {};
     this.testFireStartTime = 0;
     this.maxWaitTime = 10000; // 10 seconds max wait per shot
+    this.originalNoTargetsTimeout = null; // Store original cannon timeout
 
     this.initializeGrid();
   }
@@ -41,7 +45,7 @@ class FiringTableBuilder {
     }
   }
 
-  startBuilding() {
+  async startBuilding() {
     console.log(
       `Starting firing table build for World ${this.worldManager.currentWorldId}`
     );
@@ -52,6 +56,13 @@ class FiringTableBuilder {
     this.currentAngle = 0;
     this.firingTable = {};
 
+    // Store original timeout and disable auto-destroy during build
+    this.originalNoTargetsTimeout = this.cannon.noTargetsTimeout;
+    this.cannon.noTargetsTimeout = Infinity; // Disable timeout
+    console.log(
+      "Disabled cannon auto-destroy timeout during firing table build"
+    );
+
     // Initialize firing table structure
     for (let x = 0; x < this.canvas.width; x += this.gridSize) {
       this.firingTable[x] = {};
@@ -61,10 +72,10 @@ class FiringTableBuilder {
     }
 
     console.log(`Initialized firing table structure`);
-    this.testNextAngle();
+    await this.testNextAngle();
   }
 
-  testNextAngle() {
+  async testNextAngle() {
     if (this.currentAngle >= this.maxAngle) {
       this.finishBuilding();
       return;
@@ -81,7 +92,7 @@ class FiringTableBuilder {
     this.cannon.angle = angleRadians;
 
     // Fire cannonball
-    this.cannon.fire([], true); // Force fire regardless of cooldown
+    await this.cannon.fire([], true); // Force fire regardless of cooldown
     this.isWaitingForCannonball = true;
     this.testFireStartTime = Date.now();
 
@@ -101,21 +112,52 @@ class FiringTableBuilder {
         console.log(
           `Found cannonball at position (${body.position.x}, ${body.position.y})`
         );
-        break;
+        return;
       }
     }
 
-    if (!this.currentCannonball) {
-      console.warn(
-        `No cannonball found after firing at angle ${this.currentAngle}`
+    // If no cannonball found, log warning and try again after a short delay
+    console.warn(
+      `No cannonball found after firing at angle ${this.currentAngle}, retrying...`
+    );
+
+    // Wait a bit and try again - sometimes the cannonball takes a frame to appear
+    setTimeout(() => {
+      const retryBodies = this.physics.engine.world.bodies;
+      for (let i = retryBodies.length - 1; i >= 0; i--) {
+        const body = retryBodies[i];
+        if (body.label === "cannonball") {
+          this.currentCannonball = body;
+          console.log(
+            `Found cannonball on retry at position (${body.position.x}, ${body.position.y})`
+          );
+          return;
+        }
+      }
+
+      // Still no cannonball found - skip this angle and move to next
+      console.error(
+        `Still no cannonball found after retry for angle ${this.currentAngle}, skipping to next angle`
       );
-    }
+      this.currentAngle++;
+      if (this.currentAngle >= this.maxAngle) {
+        this.finishBuilding();
+      } else {
+        this.testNextAngle();
+      }
+    }, 50);
   }
 
   update() {
     if (!this.isBuilding) return;
 
     if (this.isWaitingForCannonball && this.currentCannonball) {
+      // Check if cannonball hit the ground - account for cannonball radius
+      const ballRadius = this.currentCannonball.circleRadius || 8;
+      const hitGround =
+        this.currentCannonball.position.y + ballRadius >=
+        CONFIG.PHYSICS.GROUND_Y;
+
       // Check if cannonball has come to rest or fallen off screen
       const isAtRest =
         Math.abs(this.currentCannonball.velocity.x) < 0.1 &&
@@ -125,18 +167,33 @@ class FiringTableBuilder {
       const timeExpired =
         Date.now() - this.testFireStartTime > this.maxWaitTime;
 
-      if (isAtRest || isOffScreen || timeExpired) {
+      if (hitGround || isAtRest || isOffScreen || timeExpired) {
+        if (hitGround) {
+          console.log(
+            `Cannonball hit ground at angle ${this.currentAngle}°, moving to next angle`
+          );
+        } else if (timeExpired) {
+          console.log(
+            `Test timeout at angle ${this.currentAngle}°, moving to next angle`
+          );
+        }
+
         // Record the hit dots for this angle
         this.recordHitsForAngle();
 
-        // Remove the cannonball
-        this.physics.removeBody(this.currentCannonball);
+        // Remove the cannonball if it still exists
+        if (
+          this.currentCannonball &&
+          this.physics.engine.world.bodies.includes(this.currentCannonball)
+        ) {
+          this.physics.removeBody(this.currentCannonball);
+        }
         this.currentCannonball = null;
         this.isWaitingForCannonball = false;
 
-        // Move to next angle
+        // Move to next angle immediately
         this.currentAngle++;
-        setTimeout(() => this.testNextAngle(), 100); // Small delay between tests
+        this.testNextAngle(); // Remove setTimeout to prevent timing issues
       } else {
         // Check for collisions with dots
         this.checkDotCollisions();
@@ -150,6 +207,15 @@ class FiringTableBuilder {
     const ballX = this.currentCannonball.position.x;
     const ballY = this.currentCannonball.position.y;
     const ballRadius = this.currentCannonball.circleRadius || 8;
+
+    // Calculate current velocity to check if it meets minimum damage threshold
+    const velocity = this.currentCannonball.velocity;
+    const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+    // Only count hits if the cannonball has enough velocity to cause damage
+    if (speed < MIN_DAMAGE_VELOCITY) {
+      return; // Skip collision detection for slow-moving cannonballs
+    }
 
     this.dots.forEach((dot, index) => {
       if (!dot.hit) {
@@ -186,6 +252,10 @@ class FiringTableBuilder {
     console.log("Firing table build complete!");
     this.isBuilding = false;
 
+    // Restore original cannon timeout
+    this.cannon.noTargetsTimeout = this.originalNoTargetsTimeout;
+    console.log("Restored cannon auto-destroy timeout");
+
     // Clean up the firing table (remove empty entries)
     const cleanTable = {};
     for (const x in this.firingTable) {
@@ -200,11 +270,18 @@ class FiringTableBuilder {
     // Generate the export string
     const exportString = this.generateExportString(cleanTable);
 
-    // Copy to clipboard
-    this.copyToClipboard(exportString);
+    // Navigate to results page with the data
+    this.navigateToResultsPage(exportString);
+  }
 
-    // Show completion message
-    this.showCompletionMessage();
+  cleanup() {
+    // Restore cannon timeout if it was modified
+    if (this.originalNoTargetsTimeout !== null) {
+      this.cannon.noTargetsTimeout = this.originalNoTargetsTimeout;
+      this.originalNoTargetsTimeout = null;
+      console.log("Cleaned up firing table builder - restored cannon timeout");
+    }
+    this.isBuilding = false;
   }
 
   generateExportString(table) {
@@ -240,6 +317,15 @@ class FiringTableBuilder {
 
     output += `};\n`;
     return output;
+  }
+
+  navigateToResultsPage(firingTableData) {
+    // Store the data in sessionStorage so it persists across page navigation
+    sessionStorage.setItem("firingTableData", firingTableData);
+    sessionStorage.setItem("worldId", this.worldManager.currentWorldId);
+
+    // Navigate to the results page
+    window.location.href = "firing-table-results.html";
   }
 
   async copyToClipboard(text) {

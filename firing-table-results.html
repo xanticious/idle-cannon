@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firing Table Results - Idle Cannon</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+      }
+
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+      }
+
+      .world-info {
+        background-color: #e8f4f8;
+        border: 2px solid #4a90a4;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .world-info h2 {
+        margin: 0 0 10px 0;
+        color: #2c5f72;
+      }
+
+      .world-info p {
+        margin: 5px 0;
+        color: #555;
+      }
+
+      textarea {
+        width: 100%;
+        height: 500px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        box-sizing: border-box;
+        resize: vertical;
+        background-color: #f9f9f9;
+      }
+
+      .button-container {
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      button {
+        background-color: #4caf50;
+        color: white;
+        padding: 15px 30px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 0 10px;
+        transition: background-color 0.3s;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      .back-button {
+        background-color: #666;
+      }
+
+      .back-button:hover {
+        background-color: #555;
+      }
+
+      .copy-success {
+        display: none;
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #007bff;
+      }
+
+      .stat-label {
+        font-size: 14px;
+        color: #666;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="page-title">Firing Table Results</h1>
+
+      <div class="world-info">
+        <h2 id="world-title">World Information</h2>
+        <p id="generation-time">Generated on: <span id="timestamp"></span></p>
+      </div>
+
+      <div class="stats" id="stats-container">
+        <!-- Stats will be populated by JavaScript -->
+      </div>
+
+      <textarea
+        id="firing-table-data"
+        readonly
+        placeholder="Loading firing table data..."
+      ></textarea>
+
+      <div class="button-container">
+        <button onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+        <button class="back-button" onclick="goBack()">⬅️ Back to Game</button>
+      </div>
+
+      <div id="copy-success" class="copy-success">
+        ✅ Firing table data copied to clipboard successfully!
+      </div>
+    </div>
+
+    <script>
+      // Load data from sessionStorage
+      window.onload = function () {
+        const firingTableData = sessionStorage.getItem("firingTableData");
+        const worldId = sessionStorage.getItem("worldId");
+
+        if (firingTableData && worldId) {
+          // Set the page title and world info
+          document.getElementById(
+            "page-title"
+          ).textContent = `Firing Table for World ${worldId}`;
+          document.getElementById(
+            "world-title"
+          ).textContent = `World ${worldId} - ${getWorldName(worldId)}`;
+          document.getElementById("timestamp").textContent =
+            new Date().toLocaleString();
+
+          // Set the textarea content
+          document.getElementById("firing-table-data").value = firingTableData;
+
+          // Calculate and display statistics
+          displayStats(firingTableData);
+        } else {
+          document.getElementById("firing-table-data").value =
+            "No firing table data found. Please generate a firing table first.";
+          document.getElementById("page-title").textContent =
+            "No Data Available";
+        }
+      };
+
+      function getWorldName(worldId) {
+        const worldNames = {
+          1: "Earth",
+          2: "Moon",
+          3: "Mars",
+          4: "Jupiter",
+          5: "Saturn",
+          6: "Uranus",
+          7: "Neptune",
+          8: "Pluto",
+        };
+        return worldNames[worldId] || "Unknown";
+      }
+
+      function displayStats(firingTableData) {
+        // Parse the firing table data to extract statistics
+        const lines = firingTableData.split("\n");
+        let totalAngles = 0;
+        let totalPositions = 0;
+        let dataLines = 0;
+
+        // Count positions and angles
+        for (const line of lines) {
+          if (line.includes(":") && line.includes("[") && line.includes("]")) {
+            dataLines++;
+            totalPositions++;
+
+            // Extract angles from the line
+            const match = line.match(/\[(.*?)\]/);
+            if (match) {
+              const angles = match[1]
+                .split(",")
+                .map((s) => s.trim())
+                .filter((s) => s);
+              totalAngles += angles.length;
+            }
+          }
+        }
+
+        // Create stats HTML
+        const statsContainer = document.getElementById("stats-container");
+        statsContainer.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-number">${totalPositions}</div>
+                    <div class="stat-label">Reachable Positions</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${totalAngles}</div>
+                    <div class="stat-label">Total Trajectory Angles</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${
+                      Math.round(
+                        (totalAngles / Math.max(totalPositions, 1)) * 100
+                      ) / 100
+                    }</div>
+                    <div class="stat-label">Avg Angles per Position</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${
+                      Math.round((firingTableData.length / 1024) * 100) / 100
+                    } KB</div>
+                    <div class="stat-label">Data Size</div>
+                </div>
+            `;
+      }
+
+      async function copyToClipboard() {
+        const textarea = document.getElementById("firing-table-data");
+        const successDiv = document.getElementById("copy-success");
+
+        try {
+          await navigator.clipboard.writeText(textarea.value);
+          successDiv.style.display = "block";
+          setTimeout(() => {
+            successDiv.style.display = "none";
+          }, 3000);
+        } catch (err) {
+          console.error("Failed to copy to clipboard:", err);
+          // Fallback: select the text
+          textarea.select();
+          textarea.setSelectionRange(0, 99999); // For mobile devices
+          alert(
+            "Text selected. Please copy manually with Ctrl+C (or Cmd+C on Mac)"
+          );
+        }
+      }
+
+      function goBack() {
+        // Clear the session storage
+        sessionStorage.removeItem("firingTableData");
+        sessionStorage.removeItem("worldId");
+
+        // Go back to the main game
+        window.location.href = "index.html";
+      }
+
+      // Handle browser back button
+      window.addEventListener("beforeunload", function () {
+        // Optionally clear session storage when leaving the page
+        sessionStorage.removeItem("firingTableData");
+        sessionStorage.removeItem("worldId");
+      });
+    </script>
+  </body>
+</html>
