@@ -2,15 +2,17 @@
 
 // Import firing table data for each world
 const firingTableModules = {
-  1: () => import("../data/firing-table/world-1.js"),
-  2: () => import("../data/firing-table/world-2.js"),
-  3: () => import("../data/firing-table/world-3.js"),
-  4: () => import("../data/firing-table/world-4.js"),
-  5: () => import("../data/firing-table/world-5.js"),
-  6: () => import("../data/firing-table/world-6.js"),
-  7: () => import("../data/firing-table/world-7.js"),
-  8: () => import("../data/firing-table/world-8.js"),
-  // Add more worlds as needed
+  1: () => import('../data/firing-table/world-1.js'),
+  2: () => import('../data/firing-table/world-2.js'),
+  3: () => import('../data/firing-table/world-3.js'),
+  4: () => import('../data/firing-table/world-4.js'),
+  5: () => import('../data/firing-table/world-5.js'),
+  6: () => import('../data/firing-table/world-6.js'),
+  7: () => import('../data/firing-table/world-7.js'),
+  8: () => import('../data/firing-table/world-8.js'),
+  9: () => import('../data/firing-table/world-9.js'),
+  10: () => import('../data/firing-table/world-10.js'),
+  11: () => import('../data/firing-table/world-11.js'),
 };
 
 // Cache for loaded firing tables
