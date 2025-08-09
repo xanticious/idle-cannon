@@ -1,6 +1,6 @@
 // Particle Effects System
-import { ObjectPool, randomFloat, randomChoice } from "./utils.js";
-import { MATERIALS } from "./config.js";
+import { ObjectPool, randomFloat, randomChoice } from './utils.js';
+import { MATERIALS } from './config.js';
 
 class Particle {
   constructor(x, y, vx, vy, life, color, size = 2) {
@@ -47,7 +47,7 @@ class ParticleSystem {
   constructor() {
     this.particles = [];
     this.particlePool = new ObjectPool(
-      () => new Particle(0, 0, 0, 0, 1000, "#fff"),
+      () => new Particle(0, 0, 0, 0, 1000, '#fff'),
       (particle) => {
         particle.active = false;
         particle.life = 1000;
@@ -63,7 +63,7 @@ class ParticleSystem {
       const vx = Math.cos(angle) * speed;
       const vy = Math.sin(angle) * speed;
       const life = randomFloat(200, 400);
-      const color = randomChoice(["#FFD700", "#FF6347", "#FFA500"]);
+      const color = randomChoice(['#FFD700', '#FF6347', '#FFA500']);
       const size = randomFloat(2, 5);
 
       this.addParticle(x, y, vx, vy, life, color, size);
@@ -85,7 +85,7 @@ class ParticleSystem {
 
   // Block destruction debris
   createDebris(x, y, material, count = 8) {
-    const baseColor = material === MATERIALS.WOOD ? "#8B4513" : "#708090";
+    const baseColor = material === MATERIALS.WOOD ? '#8B4513' : '#708090';
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -102,12 +102,12 @@ class ParticleSystem {
   // Fireworks celebration
   createFireworks(x, y) {
     const colors = [
-      "#FF6B6B",
-      "#4ECDC4",
-      "#45B7D1",
-      "#96CEB4",
-      "#FFEAA7",
-      "#DDA0DD",
+      '#FF6B6B',
+      '#4ECDC4',
+      '#45B7D1',
+      '#96CEB4',
+      '#FFEAA7',
+      '#DDA0DD',
     ];
 
     // Main burst
@@ -139,6 +139,37 @@ class ParticleSystem {
         this.addParticle(x + offsetX, y + offsetY, vx, vy, life, color, size);
       }
     }, 300);
+  }
+
+  // Fireball explosion effect
+  createFireballExplosion(x, y) {
+    const fireColors = ['#FF4500', '#FF6347', '#FFD700', '#FF8C00', '#DC143C'];
+
+    // Main explosion burst
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 * i) / 20 + randomFloat(-0.3, 0.3);
+      const speed = randomFloat(60, 100);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const life = randomFloat(800, 1200);
+      const color = randomChoice(fireColors);
+      const size = randomFloat(3, 6);
+
+      this.addParticle(x, y, vx, vy, life, color, size);
+    }
+
+    // Smoke particles
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = randomFloat(20, 40);
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed - 30; // Drift upward
+      const life = randomFloat(1500, 2000);
+      const color = randomChoice(['#555555', '#777777', '#999999']);
+      const size = randomFloat(4, 8);
+
+      this.addParticle(x, y, vx, vy, life, color, size);
+    }
   }
 
   addParticle(x, y, vx, vy, life, color, size = 2) {

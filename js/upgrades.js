@@ -15,6 +15,9 @@ class UpgradeManager {
     // Money streak multiplier system
     this.castlesDestroyedSinceLastUpgrade = 0;
 
+    // Passive income tracking
+    this.lastPassiveIncomeUpdate = Date.now();
+
     // Upgrade levels
     this.upgrades = {
       fireRate: 0,
@@ -104,6 +107,36 @@ class UpgradeManager {
 
     // Return the actual amount earned (for UI display)
     return finalAmount;
+  }
+
+  // Update passive income based on prestige upgrades
+  updatePassiveIncome() {
+    if (!this.prestigeManager) return;
+
+    const now = Date.now();
+    const timeSinceLastUpdate = now - this.lastPassiveIncomeUpdate;
+
+    // Only update if at least 1 second has passed
+    if (timeSinceLastUpdate >= 1000) {
+      const passiveIncomeLevel =
+        this.prestigeManager.prestigeUpgrades.passiveIncome;
+      const passiveIncomePerSecond = passiveIncomeLevel; // $1 per second per level
+
+      const secondsElapsed = Math.floor(timeSinceLastUpdate / 1000);
+      const passiveAmount = passiveIncomePerSecond * secondsElapsed;
+
+      if (passiveAmount > 0) {
+        this.money += passiveAmount;
+        this.totalEarned += passiveAmount;
+        this.lastPassiveIncomeUpdate = now;
+
+        // Track for income rate calculation
+        this.recentEarnings.push({
+          amount: passiveAmount,
+          timestamp: now,
+        });
+      }
+    }
   }
 
   updateIncomeRate() {
@@ -200,6 +233,7 @@ class UpgradeManager {
       castlesDestroyed: this.castlesDestroyed,
       castlesDestroyedSinceLastUpgrade: this.castlesDestroyedSinceLastUpgrade,
       upgrades: this.upgrades,
+      lastPassiveIncomeUpdate: this.lastPassiveIncomeUpdate,
       timestamp: Date.now(),
     };
 
@@ -223,6 +257,8 @@ class UpgradeManager {
         this.castlesDestroyedSinceLastUpgrade =
           data.castlesDestroyedSinceLastUpgrade || 0;
         this.upgrades = { ...this.upgrades, ...data.upgrades };
+        this.lastPassiveIncomeUpdate =
+          data.lastPassiveIncomeUpdate || Date.now();
 
         // Calculate offline earnings (simple version)
         if (data.timestamp) {
@@ -264,6 +300,7 @@ class UpgradeManager {
     this.incomeRate = 0;
     this.recentEarnings = [];
     this.castlesDestroyedSinceLastUpgrade = 0;
+    this.lastPassiveIncomeUpdate = Date.now();
 
     this.upgrades = {
       fireRate: 0,
@@ -283,6 +320,7 @@ class UpgradeManager {
     this.castlesDestroyedSinceLastUpgrade = 0;
     this.recentEarnings = [];
     this.incomeRate = 0;
+    this.lastPassiveIncomeUpdate = Date.now();
 
     this.upgrades = {
       fireRate: 0,

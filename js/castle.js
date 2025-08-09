@@ -138,11 +138,12 @@ class Block {
 }
 
 class Castle {
-  constructor(x, y, physicsWorld, particleSystem) {
+  constructor(x, y, physicsWorld, particleSystem, prestigeManager = null) {
     this.x = x;
     this.y = y;
     this.physics = physicsWorld;
     this.particles = particleSystem;
+    this.prestigeManager = prestigeManager;
     this.blocks = [];
     this.isDestroyed = false;
     this.destructionTime = 0;
@@ -173,12 +174,26 @@ class Castle {
     // Clear any existing blocks
     this.clearBlocks();
 
-    // Random castle dimensions
-    const width = randomInt(CONFIG.CASTLE.MIN_WIDTH, CONFIG.CASTLE.MAX_WIDTH);
-    const height = randomInt(
+    // Calculate bigger castles bonus
+    let sizeMultiplier = 1.0;
+    if (this.prestigeManager) {
+      const biggerCastlesLevel =
+        this.prestigeManager.prestigeUpgrades.biggerCastles;
+      sizeMultiplier = 1.0 + biggerCastlesLevel * 0.1; // 10% increase per level
+    }
+
+    // Random castle dimensions with size multiplier
+    const baseWidth = randomInt(
+      CONFIG.CASTLE.MIN_WIDTH,
+      CONFIG.CASTLE.MAX_WIDTH
+    );
+    const baseHeight = randomInt(
       CONFIG.CASTLE.MIN_HEIGHT,
       CONFIG.CASTLE.MAX_HEIGHT
     );
+
+    const width = Math.floor(baseWidth * sizeMultiplier);
+    const height = Math.floor(baseHeight * sizeMultiplier);
 
     // Generate castle structure
     const structure = this.generateStructure(width, height);
@@ -507,6 +522,7 @@ class Castle {
       if (hitBlock && !hitBlock.isDestroyed) {
         // Calculate collision velocity
         const cannonball = collision.cannonball;
+        const cannonballData = collision.cannonballData;
         const velocity = cannonball.velocity;
         const speed = Math.sqrt(
           velocity.x * velocity.x + velocity.y * velocity.y
@@ -522,37 +538,97 @@ class Castle {
           }
 
           // Calculate damage based on velocity
-          // Scale: 0-1 damage for speeds 5-15, 1-5 damage for speeds 15-50+
-          let damage = 0;
+          let damage = this.calculateDamage(speed);
 
-          if (speed < 15) {
-            // Low speed: 0-1 damage
-            damage = Math.floor((speed - minDamageVelocity) / 10);
-          } else if (speed < 30) {
-            // Medium speed: 1-3 damage
-            damage = 1 + Math.floor((speed - 15) / 7.5);
+          // Check if this is a fireball
+          const isFireball = cannonballData && cannonballData.isFireball;
+
+          if (isFireball) {
+            // Create explosion effect
+            const pos = cannonball.position;
+            this.particles.createFireballExplosion(pos.x, pos.y);
+
+            // Damage all blocks within explosion radius
+            const explosionRadius = 40; // 40 pixel radius
+            const nearbyBlocks = this.physics.getBlocksInRadius(
+              pos.x,
+              pos.y,
+              explosionRadius
+            );
+
+            for (const nearbyBlockBody of nearbyBlocks) {
+              const nearbyBlock = this.blocks.find(
+                (block) => block.body === nearbyBlockBody
+              );
+              if (nearbyBlock && !nearbyBlock.isDestroyed) {
+                // Calculate distance-based damage (closer = more damage)
+                const distance = Math.sqrt(
+                  Math.pow(nearbyBlockBody.position.x - pos.x, 2) +
+                    Math.pow(nearbyBlockBody.position.y - pos.y, 2)
+                );
+                const distanceFactor = Math.max(
+                  0.3,
+                  1 - distance / explosionRadius
+                );
+                const explosionDamage = Math.floor(damage * distanceFactor);
+
+                // Disable protection for explosion damage
+                if (nearbyBlock.isProtected) {
+                  nearbyBlock.isProtected = false;
+                }
+
+                const wasDestroyed = nearbyBlock.takeDamage(explosionDamage);
+
+                // Apply explosion force to push blocks away
+                if (!wasDestroyed) {
+                  const forceMultiplier = 0.03; // Base force strength
+                  const forceStrength = forceMultiplier * distanceFactor;
+
+                  // Calculate direction from explosion center to block
+                  const deltaX = nearbyBlockBody.position.x - pos.x;
+                  const deltaY = nearbyBlockBody.position.y - pos.y;
+
+                  // Normalize the direction (avoid division by zero)
+                  if (distance > 0.1) {
+                    const normalizedX = deltaX / distance;
+                    const normalizedY = deltaY / distance;
+
+                    // Apply force away from explosion center
+                    const forceX = normalizedX * forceStrength;
+                    const forceY = normalizedY * forceStrength;
+
+                    this.physics.applyForce(nearbyBlockBody, forceX, forceY);
+                  }
+                }
+
+                if (wasDestroyed) {
+                  // Create debris particles
+                  const blockPos = nearbyBlockBody.position;
+                  this.particles.createDebris(
+                    blockPos.x,
+                    blockPos.y,
+                    nearbyBlock.material
+                  );
+                  // Remove from physics world
+                  this.physics.removeBlock(nearbyBlockBody);
+                }
+              }
+            }
           } else {
-            // High speed: 3-5 damage
-            damage = Math.min(5, 3 + Math.floor((speed - 30) / 10));
+            // Normal cannonball damage
+            const wasDestroyed = hitBlock.takeDamage(damage);
+
+            if (wasDestroyed) {
+              // Create debris particles
+              const pos = hitBlock.body.position;
+              this.particles.createDebris(pos.x, pos.y, hitBlock.material);
+              // Remove from physics world
+              this.physics.removeBlock(hitBlock.body);
+            }
           }
-
-          // Ensure at least 1 damage for valid collisions
-          damage = Math.max(1, damage);
-
-          // Apply damage
-          const wasDestroyed = hitBlock.takeDamage(damage);
 
           // Track that damage was taken
           this.onDamageTaken();
-
-          if (wasDestroyed) {
-            // Create debris particles
-            const pos = hitBlock.body.position;
-            this.particles.createDebris(pos.x, pos.y, hitBlock.material);
-
-            // Remove from physics world
-            this.physics.removeBlock(hitBlock.body);
-          }
         }
       }
     }
@@ -562,6 +638,26 @@ class Castle {
 
     // Handle block-block collisions
     this.handleBlockCollisions();
+  }
+
+  calculateDamage(speed) {
+    // Scale: 0-1 damage for speeds 5-15, 1-5 damage for speeds 15-50+
+    let damage = 0;
+    const minDamageVelocity = 5;
+
+    if (speed < 15) {
+      // Low speed: 0-1 damage
+      damage = Math.floor((speed - minDamageVelocity) / 10);
+    } else if (speed < 30) {
+      // Medium speed: 1-3 damage
+      damage = 1 + Math.floor((speed - 15) / 7.5);
+    } else {
+      // High speed: 3-5 damage
+      damage = Math.min(5, 3 + Math.floor((speed - 30) / 10));
+    }
+
+    // Ensure at least 1 damage for valid collisions
+    return Math.max(1, damage);
   }
 
   handleGroundCollisions() {
@@ -678,9 +774,32 @@ class Castle {
     const activeBlocks = this.blocks.filter((block) => {
       if (block.isDestroyed) return false;
 
-      // Check if block fell off screen
+      // Check if block fell off screen (any direction)
       const pos = block.body.position;
+
+      // Check if block fell below screen
       if (pos.y > CONFIG.CANVAS.HEIGHT + 50) {
+        block.isDestroyed = true;
+        this.physics.removeBlock(block.body);
+        return false;
+      }
+
+      // Check if block went too far left
+      if (pos.x < -100) {
+        block.isDestroyed = true;
+        this.physics.removeBlock(block.body);
+        return false;
+      }
+
+      // Check if block went too far right
+      if (pos.x > CONFIG.CANVAS.WIDTH + 100) {
+        block.isDestroyed = true;
+        this.physics.removeBlock(block.body);
+        return false;
+      }
+
+      // Check if block went too high up
+      if (pos.y < -1000) {
         block.isDestroyed = true;
         this.physics.removeBlock(block.body);
         return false;

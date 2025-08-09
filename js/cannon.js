@@ -1,7 +1,7 @@
 // Cannon class - handles firing logic and upgrades
-import { CONFIG } from "./config.js";
-import { randomFloat, toDegrees, toRadians } from "./utils.js";
-import { calculateLaunchAngles } from "./trajectoryUtils.js";
+import { CONFIG } from './config.js';
+import { randomFloat, toDegrees, toRadians } from './utils.js';
+import { calculateLaunchAngles } from './trajectoryUtils.js';
 
 class Cannon {
   constructor(x, y, physicsWorld, particleSystem, worldManager) {
@@ -27,6 +27,9 @@ class Cannon {
       size: 0,
     };
 
+    // Prestige manager reference (will be set by main game)
+    this.prestigeManager = null;
+
     // Visual properties
     this.angle = 0;
     this.recoil = 0;
@@ -49,10 +52,14 @@ class Cannon {
     this.noTargetsTimeout = 5000; // 5 seconds
 
     console.log(
-      "Cannon initialized with no-targets timeout:",
+      'Cannon initialized with no-targets timeout:',
       this.noTargetsTimeout / 1000,
-      "seconds"
+      'seconds'
     );
+  }
+
+  setPrestigeManager(prestigeManager) {
+    this.prestigeManager = prestigeManager;
   }
 
   async update(deltaTime, isPaused = false, targetBricks = []) {
@@ -104,7 +111,7 @@ class Cannon {
       // Fallback to random angle if no targets but timeout not reached
       targetAngle = -45 * (Math.PI / 180); // -45 degrees
 
-      if (window.location.search.includes("debug")) {
+      if (window.location.search.includes('debug')) {
         console.log(
           `No targets found, firing at fallback angle: ${(
             (targetAngle * 180) /
@@ -121,18 +128,77 @@ class Cannon {
       targetAngle = this.angle;
     }
 
+    // Fire main cannonball
+    await this.fireCannonball(targetAngle, 'normal');
+
+    // Handle prestige upgrades
+    if (this.prestigeManager) {
+      // Double Shot upgrade
+      const doubleShotLevel = this.prestigeManager.prestigeUpgrades.doubleShot;
+      const doubleShotChance = doubleShotLevel * 0.1; // 10% per level
+      if (Math.random() < doubleShotChance && targetBricks.length > 0) {
+        // Fire a second cannonball at a different valid angle
+        const secondAngle = await this.calculateSmartAngle(targetBricks);
+        if (secondAngle && secondAngle !== targetAngle) {
+          await this.fireCannonball(secondAngle, 'double');
+        }
+      }
+
+      // Blast Shot upgrade
+      const blastShotLevel = this.prestigeManager.prestigeUpgrades.blastShot;
+      const blastShotChance = blastShotLevel * 0.1; // 10% per level
+      if (Math.random() < blastShotChance) {
+        // Fire horizontal blast shot at high speed
+        const blastAngle = -1 * (Math.PI / 180); // -1 degree
+        await this.fireCannonball(blastAngle, 'blast');
+      }
+
+      // Fireballs upgrade
+      const fireballsLevel = this.prestigeManager.prestigeUpgrades.fireballs;
+      const fireballsChance = fireballsLevel * 0.1; // 10% per level
+      if (Math.random() < fireballsChance) {
+        // Convert the main shot to a fireball (we'll handle this in the physics)
+        // The last cannonball created will be marked as a fireball
+        const lastCannonball =
+          this.physics.cannonballs[this.physics.cannonballs.length - 1];
+        if (lastCannonball) {
+          lastCannonball.isFireball = true;
+        }
+      }
+    }
+
+    // Visual effects (muzzle flash should be in world space since particles are rendered with world offset)
+    this.recoil = 1.0;
+    this.angle = -targetAngle; // Store negative angle for rendering
+    this.particles.createMuzzleFlash(
+      this.x + Math.cos(-targetAngle) * this.barrelLength,
+      this.y + Math.sin(-targetAngle) * this.barrelLength
+    );
+    this.justFired = true;
+
+    // Smoke trail will be added in the main game loop
+    return null; // Normal firing, no special action needed
+  }
+
+  async fireCannonball(angle, type = 'normal') {
     // Create cannonball at barrel end
-    const barrelEndX = this.x + Math.cos(-targetAngle) * this.barrelLength;
-    const barrelEndY = this.y + Math.sin(-targetAngle) * this.barrelLength;
+    const barrelEndX = this.x + Math.cos(-angle) * this.barrelLength;
+    const barrelEndY = this.y + Math.sin(-angle) * this.barrelLength;
+
+    // Calculate speed based on shot type
+    let speed = this.getBallSpeed();
+    if (type === 'blast') {
+      speed *= 2.5; // Blast shot is 2.5x faster
+    }
 
     // Calculate velocity (negative Y for upward)
     const velocity = {
-      x: Math.cos(-targetAngle) * this.getBallSpeed(),
-      y: Math.sin(-targetAngle) * this.getBallSpeed(),
+      x: Math.cos(-angle) * speed,
+      y: Math.sin(-angle) * speed,
     };
 
-    // Create physics body with randomized values
-    this.physics.createCannonball(
+    // Create physics body
+    const cannonball = this.physics.createCannonball(
       barrelEndX,
       barrelEndY,
       this.getBallSize(),
@@ -140,14 +206,14 @@ class Cannon {
       velocity
     );
 
-    // Visual effects (muzzle flash should be in world space since particles are rendered with world offset)
-    this.recoil = 1.0;
-    this.angle = -targetAngle; // Store negative angle for rendering
-    this.particles.createMuzzleFlash(barrelEndX, barrelEndY);
-    this.justFired = true;
+    // Mark special shot types
+    const cannonballData =
+      this.physics.cannonballs[this.physics.cannonballs.length - 1];
+    if (cannonballData) {
+      cannonballData.shotType = type;
+    }
 
-    // Smoke trail will be added in the main game loop
-    return null; // Normal firing, no special action needed
+    return cannonball;
   }
 
   // Upgrade getters with bonuses applied
@@ -178,13 +244,13 @@ class Cannon {
       world: this.worldManager.getCurrentWorld(),
     });
 
-    if (window.location.search.includes("debug")) {
+    if (window.location.search.includes('debug')) {
       if (angles) {
         console.log(
           `Found ${angles.length} valid angles for target (${endX.toFixed(
             1
           )}, ${endY.toFixed(1)}):`,
-          angles.map((a) => ((a * 180) / Math.PI).toFixed(1) + "°").join(", ")
+          angles.map((a) => ((a * 180) / Math.PI).toFixed(1) + '°').join(', ')
         );
       } else {
         console.log(
@@ -229,14 +295,14 @@ class Cannon {
       const randomIndex = Math.floor(Math.random() * allValidAngles.length);
       targetAngle = allValidAngles[randomIndex];
 
-      if (window.location.search.includes("debug")) {
+      if (window.location.search.includes('debug')) {
         console.log(
           `Final angle: ${((targetAngle * 180) / Math.PI).toFixed(1)}°`
         );
       }
     } else {
       console.warn(
-        "No valid angles found for any target bricks, using fallback angle"
+        'No valid angles found for any target bricks, using fallback angle'
       );
       targetAngle = 35 * (Math.PI / 180); // Fallback to 35 degrees
     }
@@ -264,7 +330,7 @@ class Cannon {
     ctx.translate(-recoilOffset, 0);
 
     // Draw cannon base (wheels)
-    ctx.fillStyle = "#654321";
+    ctx.fillStyle = '#654321';
     ctx.beginPath();
     ctx.arc(-15, 15, 12, 0, Math.PI * 2);
     ctx.arc(15, 15, 12, 0, Math.PI * 2);
@@ -280,7 +346,7 @@ class Cannon {
     ctx.fillRect(0, -6, this.barrelLength, 12);
 
     // Draw barrel end highlight
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = '#1a1a1a';
     ctx.beginPath();
     ctx.arc(this.barrelLength, 0, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -288,11 +354,11 @@ class Cannon {
     ctx.restore();
 
     // Draw cannon details
-    ctx.fillStyle = "#8B4513";
+    ctx.fillStyle = '#8B4513';
     ctx.fillRect(-20, -10, 40, 20);
 
     // Draw straps/bands
-    ctx.strokeStyle = "#2F2F2F";
+    ctx.strokeStyle = '#2F2F2F';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-25, -8);

@@ -1,5 +1,5 @@
 // Physics wrapper and helpers using Matter.js
-import { CONFIG, MATERIALS } from "./config.js";
+import { CONFIG, MATERIALS } from './config.js';
 
 class PhysicsWorld {
   constructor() {
@@ -40,7 +40,7 @@ class PhysicsWorld {
       frictionAir: 0.01,
       frictionStatic: 0.5,
       render: { fillStyle: CONFIG.COLORS.CANNONBALL },
-      label: "cannonball",
+      label: 'cannonball',
     });
 
     // Set initial velocity
@@ -56,7 +56,7 @@ class PhysicsWorld {
     return cannonball;
   }
 
-  createBlock(x, y, width, height, material, shape = "square") {
+  createBlock(x, y, width, height, material, shape = 'square') {
     const isWood = material === MATERIALS.WOOD;
 
     // Only create rectangles since we're only using squares
@@ -204,6 +204,7 @@ class PhysicsWorld {
           collisions.push({
             cannonball: cb.body,
             block: block,
+            cannonballData: cb, // Include the full cannonball data for fireball checks
           });
         }
       }
@@ -224,6 +225,30 @@ class PhysicsWorld {
     );
   }
 
+  // Find all blocks within a certain radius of a point (for fireball explosions)
+  getBlocksInRadius(centerX, centerY, radius) {
+    const blocksInRadius = [];
+
+    for (const block of this.blocks) {
+      const blockPos = block.position;
+      const distance = Math.sqrt(
+        Math.pow(blockPos.x - centerX, 2) + Math.pow(blockPos.y - centerY, 2)
+      );
+
+      if (distance <= radius) {
+        blocksInRadius.push(block);
+      }
+    }
+
+    return blocksInRadius;
+  }
+
+  // Apply force to a physics body
+  applyForce(body, forceX, forceY) {
+    // Use Matter.js Body.applyForce to apply force at the body's center
+    Matter.Body.applyForce(body, body.position, { x: forceX, y: forceY });
+  }
+
   render(ctx) {
     // Render all physics bodies
     this.renderBodies(
@@ -231,6 +256,49 @@ class PhysicsWorld {
       this.cannonballs.map((cb) => cb.body)
     );
     this.renderBodies(ctx, this.blocks);
+
+    // Render special effects for fireball cannonballs
+    this.renderFireballEffects(ctx);
+  }
+
+  renderFireballEffects(ctx) {
+    for (const cannonballData of this.cannonballs) {
+      if (cannonballData.isFireball) {
+        const pos = cannonballData.body.position;
+        const radius = cannonballData.body.circleRadius;
+
+        // Draw fire glow effect
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+
+        // Outer glow
+        const glowGradient = ctx.createRadialGradient(
+          pos.x,
+          pos.y,
+          radius,
+          pos.x,
+          pos.y,
+          radius * 2.5
+        );
+        glowGradient.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+        glowGradient.addColorStop(0.5, 'rgba(255, 50, 0, 0.3)');
+        glowGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+        ctx.fillStyle = glowGradient;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner fire core
+        ctx.globalCompositeOperation = 'normal';
+        ctx.fillStyle = '#FF4500';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
   }
 
   renderBodies(ctx, bodies) {
@@ -242,10 +310,10 @@ class PhysicsWorld {
       ctx.rotate(body.angle);
 
       // Set fill style
-      ctx.fillStyle = body.render.fillStyle || "#888";
+      ctx.fillStyle = body.render.fillStyle || '#888';
 
       // Draw based on body type
-      if (body.label === "Circle Body") {
+      if (body.label === 'Circle Body') {
         ctx.beginPath();
         ctx.arc(0, 0, body.circleRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -269,7 +337,7 @@ class PhysicsWorld {
 
           // Add stroke for blocks
           if (this.blocks.includes(body)) {
-            ctx.strokeStyle = "#000";
+            ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             ctx.stroke();
           }

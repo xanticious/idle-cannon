@@ -32,7 +32,8 @@ class Game {
     // Cannon pause system
     this.cannonPaused = false;
     this.pauseStartTime = 0;
-    this.pauseDuration = 10000; // 10 seconds
+    this.pauseDuration = 10000; // 10 seconds default
+    this.currentPauseDuration = 10000; // Actual pause duration (affected by prestige upgrades)
 
     // Performance monitoring
     this.performanceMonitor = new PerformanceMonitor();
@@ -65,6 +66,9 @@ class Game {
       this.worldManager
     );
 
+    // Set prestige manager reference in cannon
+    this.cannon.setPrestigeManager(this.prestigeManager);
+
     // Only initialize UI if not in build table mode
     if (!this.worldManager.buildTableMode) {
       this.ui = new UIManager(
@@ -83,7 +87,8 @@ class Game {
         CONFIG.CASTLE.X,
         CONFIG.CASTLE.Y,
         this.physics,
-        this.particles
+        this.particles,
+        this.prestigeManager
       );
 
       // Reset cannon's no-targets timer for initial castle
@@ -169,13 +174,16 @@ class Game {
 
     // Add smoke trails to active cannonballs
     this.addCannonballTrails();
+
+    // Update passive income
+    this.upgradeManager.updatePassiveIncome();
   }
 
   async updatePlaying(deltaTime) {
     // Check if cannon pause has expired
     if (this.cannonPaused) {
       const now = Date.now();
-      if (now - this.pauseStartTime >= this.pauseDuration) {
+      if (now - this.pauseStartTime >= this.currentPauseDuration) {
         this.cannonPaused = false;
       }
     }
@@ -223,9 +231,19 @@ class Game {
     if (this.castle.isDestroyed && !this.castle.fadingOut) {
       this.gameState = GAME_STATES.CASTLE_DESTROYED;
 
-      // Pause cannon for 10 seconds
+      // Calculate pause duration with faster reload prestige upgrade
+      let pauseDuration = this.pauseDuration; // Default 10 seconds
+      if (this.prestigeManager) {
+        const fasterReloadLevel =
+          this.prestigeManager.prestigeUpgrades.fasterReload;
+        const reloadReduction = fasterReloadLevel * 1000; // 1 second per level
+        pauseDuration = Math.max(0, pauseDuration - reloadReduction); // Minimum 0 seconds
+      }
+
+      // Pause cannon
       this.cannonPaused = true;
       this.pauseStartTime = Date.now();
+      this.currentPauseDuration = pauseDuration; // Store the actual pause duration used
 
       // Award money (with streak multiplier)
       const baseReward = this.castle.getReward();
@@ -277,7 +295,8 @@ class Game {
       CONFIG.CASTLE.X,
       CONFIG.CASTLE.Y - 300, // Start 300 pixels above normal position
       this.physics,
-      this.particles
+      this.particles,
+      this.prestigeManager
     );
   }
 
@@ -478,7 +497,8 @@ class Game {
   renderCannonPauseIndicator() {
     if (this.cannonPaused) {
       const now = Date.now();
-      const timeRemaining = this.pauseDuration - (now - this.pauseStartTime);
+      const timeRemaining =
+        this.currentPauseDuration - (now - this.pauseStartTime);
       const secondsRemaining = Math.ceil(timeRemaining / 1000);
 
       this.ctx.save();
@@ -494,7 +514,7 @@ class Game {
       // Draw progress bar
       const barWidth = 100;
       const barHeight = 8;
-      const progress = Math.max(0, timeRemaining / this.pauseDuration);
+      const progress = Math.max(0, timeRemaining / this.currentPauseDuration);
 
       // Background bar
       this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
