@@ -1,5 +1,5 @@
 // World progression system management
-import { CONFIG } from "./config.js";
+import { CONFIG } from './config.js';
 
 class WorldManager {
   constructor() {
@@ -20,7 +20,7 @@ class WorldManager {
 
   checkWorldParameter() {
     const urlParams = new URLSearchParams(window.location.search);
-    const worldParam = urlParams.get("world");
+    const worldParam = urlParams.get('world');
     if (worldParam) {
       const worldId = parseInt(worldParam);
       if (worldId >= 1 && worldId <= CONFIG.WORLDS.length) {
@@ -34,10 +34,10 @@ class WorldManager {
 
   checkBuildTableParameter() {
     const urlParams = new URLSearchParams(window.location.search);
-    const buildTableParam = urlParams.get("buildTable");
-    if (buildTableParam === "true") {
+    const buildTableParam = urlParams.get('buildTable');
+    if (buildTableParam === 'true') {
       this.buildTableMode = true;
-      console.log("Debug: Entering firing table build mode");
+      console.log('Debug: Entering firing table build mode');
     }
   }
 
@@ -89,6 +89,13 @@ class WorldManager {
     );
   }
 
+  canPrestige() {
+    // Can prestige when completed all worlds (Ceres is the final world)
+    return (
+      this.isReadyForNextWorld && this.currentWorldId === CONFIG.WORLDS.length
+    );
+  }
+
   progressToNextWorld(upgradeManager, physicsWorld) {
     if (!this.canProgressToNextWorld()) {
       return false;
@@ -133,7 +140,7 @@ class WorldManager {
     document.body.style.background = `linear-gradient(to bottom, ${colors.sky} 0%, ${colors.grass} 100%)`;
 
     // Update canvas background gradient
-    const canvas = document.getElementById("gameCanvas");
+    const canvas = document.getElementById('gameCanvas');
     if (canvas) {
       canvas.style.background = `linear-gradient(to bottom, ${colors.sky} 0%, ${colors.grass} 80%)`;
     }
@@ -154,7 +161,7 @@ class WorldManager {
     const upgradesMaxed = fireRateMaxed && sizeMaxed;
 
     if (!upgradesMaxed) {
-      return "Max all upgrades to unlock world progression";
+      return 'Max all upgrades to unlock world progression';
     }
 
     const remaining = Math.max(
@@ -166,9 +173,9 @@ class WorldManager {
     }
 
     if (this.currentWorldId < CONFIG.WORLDS.length) {
-      return "Ready to progress to next world!";
+      return 'Ready to progress to next world!';
     } else {
-      return "All worlds completed! (Prestige coming soon...)";
+      return 'Ready to Prestige! Control the entire Solar System!';
     }
   }
 
@@ -180,15 +187,15 @@ class WorldManager {
     };
 
     try {
-      localStorage.setItem("idleCannon_world", JSON.stringify(saveData));
+      localStorage.setItem('idleCannon_world', JSON.stringify(saveData));
     } catch (e) {
-      console.warn("Failed to save world progress:", e);
+      console.warn('Failed to save world progress:', e);
     }
   }
 
   loadProgress() {
     try {
-      const saveData = localStorage.getItem("idleCannon_world");
+      const saveData = localStorage.getItem('idleCannon_world');
       if (saveData) {
         const data = JSON.parse(saveData);
         this.currentWorldId = data.currentWorldId || 1;
@@ -197,7 +204,7 @@ class WorldManager {
         this.isReadyForNextWorld = data.isReadyForNextWorld || false;
       }
     } catch (e) {
-      console.warn("Failed to load world progress:", e);
+      console.warn('Failed to load world progress:', e);
     }
   }
 
@@ -207,10 +214,18 @@ class WorldManager {
     this.isReadyForNextWorld = false;
 
     try {
-      localStorage.removeItem("idleCannon_world");
+      localStorage.removeItem('idleCannon_world');
     } catch (e) {
-      console.warn("Failed to clear world save data:", e);
+      console.warn('Failed to clear world save data:', e);
     }
+  }
+
+  resetToWorld1() {
+    // Reset to world 1 (used for prestige and full reset)
+    this.currentWorldId = 1;
+    this.castlesDestroyedInCurrentWorld = 0;
+    this.isReadyForNextWorld = false;
+    this.saveProgress();
   }
 }
 

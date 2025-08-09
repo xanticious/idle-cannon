@@ -222,6 +222,106 @@ export const CONFIG = {
     BASE_MULTIPLIER: 1,
     MAX_STREAK_MULTIPLIER: 10,
   },
+
+  PRESTIGE: {
+    BASE_GEM_REWARD: 50, // Gems earned on first prestige
+    GEM_PER_CASTLE: 1, // Gems earned per castle after first prestige
+    UPGRADE_BASE_COST: 50, // Base cost for prestige upgrades
+    UPGRADE_COST_MULTIPLIER: 2, // Cost multiplier for prestige upgrades
+    INCOME_BONUS_PER_LEVEL: 0.1, // 10% income bonus per prestige level
+    UPGRADE_LEVEL_CAPS: {
+      doubleShot: 10,
+      fasterReload: 10,
+      blastShot: 10,
+      fireballs: 10,
+      biggerCastles: 10,
+      passiveIncome: 10,
+    },
+    UPGRADES: {
+      doubleShot: {
+        name: 'Double Shot',
+        description: 'Chance to fire two cannonballs simultaneously',
+      },
+      fasterReload: {
+        name: 'Faster Reload',
+        description:
+          'Reduces time between castle destruction and new castle spawn',
+      },
+      blastShot: {
+        name: 'Blast Shot',
+        description: 'Chance to fire a super-fast horizontal cannonball',
+      },
+      fireballs: {
+        name: 'Fireballs',
+        description:
+          'Chance for explosive cannonballs that damage nearby blocks',
+      },
+      biggerCastles: {
+        name: 'Bigger Castles',
+        description: 'Increases maximum castle size and complexity',
+      },
+      passiveIncome: {
+        name: 'Passive Income',
+        description: 'Earn money automatically over time',
+      },
+    },
+    CANNONS: [
+      {
+        id: 0,
+        name: 'Medieval Cannon',
+        description: 'The classic castle destroyer',
+        unlocked: true,
+      },
+      {
+        id: 1,
+        name: 'Pirate Cannon',
+        description: 'Weathered wood with iron cannonballs',
+        prestigeLevel: 1,
+      },
+      {
+        id: 2,
+        name: 'WW1 Artillery',
+        description: 'Military green with explosive shells',
+        prestigeLevel: 2,
+      },
+      {
+        id: 3,
+        name: 'WW2 Tank Cannon',
+        description: 'Armored steel with armor-piercing rounds',
+        prestigeLevel: 3,
+      },
+      {
+        id: 4,
+        name: 'Modern Tank',
+        description: 'Desert camo with high-velocity shells',
+        prestigeLevel: 4,
+      },
+      {
+        id: 5,
+        name: 'Mortar',
+        description: 'Compact design with arcing projectiles',
+        prestigeLevel: 5,
+      },
+      {
+        id: 6,
+        name: 'Bazooka',
+        description: 'Rocket launcher with missile projectiles',
+        prestigeLevel: 6,
+      },
+      {
+        id: 7,
+        name: 'Missile Launcher',
+        description: 'Futuristic guided missiles',
+        prestigeLevel: 7,
+      },
+      {
+        id: 8,
+        name: 'Futuristic Cannon',
+        description: 'Energy weapon with plasma projectiles',
+        prestigeLevel: 8,
+      },
+    ],
+  },
 };
 
 // Material types

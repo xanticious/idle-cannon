@@ -1,23 +1,32 @@
 // UI Management for HUD and interface
-import { formatNumber } from "./utils.js";
+import { formatNumber } from './utils.js';
 
 class UIManager {
   constructor(
     upgradeManager,
     worldManager = null,
     onUpgradePurchased = null,
-    cannon = null
+    cannon = null,
+    prestigeManager = null
   ) {
     this.upgradeManager = upgradeManager;
     this.worldManager = worldManager;
     this.onUpgradePurchased = onUpgradePurchased;
     this.cannon = cannon;
+    this.prestigeManager = prestigeManager;
+    this.game = null; // Will be set by game
     this.isHidden = false;
+    this.currentTab = 'upgrades'; // 'upgrades', 'prestige', 'cannons'
     this.elements = {};
 
     this.initializeElements();
     this.setupEventListeners();
+    this.createTabs();
     this.createUpgradeCards();
+  }
+
+  setGame(game) {
+    this.game = game;
   }
 
   // Method to set cannon reference after it's created
@@ -28,37 +37,41 @@ class UIManager {
   initializeElements() {
     // Cache DOM elements
     this.elements = {
-      hud: document.getElementById("hud"),
-      hudToggle: document.getElementById("hudToggle"),
-      showHudButton: document.getElementById("showHudButton"),
-      moneyAmount: document.getElementById("moneyAmount"),
-      totalEarned: document.getElementById("totalEarned"),
-      streakMultiplier: document.getElementById("streakMultiplier"),
-      castlesDestroyed: document.getElementById("castlesDestroyed"),
-      upgradesContainer: document.getElementById("upgradesContainer"),
-      resetProgress: document.getElementById("resetProgress"),
-      worldName: document.getElementById("worldName"),
+      hud: document.getElementById('hud'),
+      hudToggle: document.getElementById('hudToggle'),
+      showHudButton: document.getElementById('showHudButton'),
+      moneyAmount: document.getElementById('moneyAmount'),
+      totalEarned: document.getElementById('totalEarned'),
+      streakMultiplier: document.getElementById('streakMultiplier'),
+      castlesDestroyed: document.getElementById('castlesDestroyed'),
+      upgradesContainer: document.getElementById('upgradesContainer'),
+      resetProgress: document.getElementById('resetProgress'),
+      worldName: document.getElementById('worldName'),
+      gemsAmount: document.getElementById('gemsAmount'),
+      gemsDisplay: document.getElementById('gemsDisplay'),
+      prestigeLevel: document.getElementById('prestigeLevel'),
+      prestigeLevelDisplay: document.getElementById('prestigeLevelDisplay'),
     };
   }
 
   setupEventListeners() {
     // HUD toggle button
-    this.elements.hudToggle.addEventListener("click", () => {
+    this.elements.hudToggle.addEventListener('click', () => {
       this.toggleHUD();
     });
 
     // Show HUD button
-    this.elements.showHudButton.addEventListener("click", () => {
+    this.elements.showHudButton.addEventListener('click', () => {
       this.showHUD();
     });
 
     // Reset progress button
-    this.elements.resetProgress.addEventListener("click", () => {
+    this.elements.resetProgress.addEventListener('click', () => {
       this.handleResetProgress();
     });
 
     // Auto-save when window closes
-    window.addEventListener("beforeunload", () => {
+    window.addEventListener('beforeunload', () => {
       this.upgradeManager.saveProgress();
     });
 
@@ -67,8 +80,190 @@ class UIManager {
       this.upgradeManager.saveProgress();
     }, 30000); // Save every 30 seconds
   }
+
+  createTabs() {
+    // Create tab navigation if it doesn't exist
+    let tabContainer = document.getElementById('tabContainer');
+    if (!tabContainer) {
+      tabContainer = document.createElement('div');
+      tabContainer.id = 'tabContainer';
+      tabContainer.className = 'tab-container';
+
+      const tabs = [
+        { id: 'upgrades', label: 'Upgrades', visible: true },
+        {
+          id: 'prestige',
+          label: 'Prestige Upgrades',
+          visible: () =>
+            this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
+        },
+        {
+          id: 'cannons',
+          label: 'Cannons',
+          visible: () =>
+            this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
+        },
+      ];
+
+      tabs.forEach((tab) => {
+        const tabButton = document.createElement('button');
+        tabButton.id = `${tab.id}Tab`;
+        tabButton.className = `tab-button ${
+          this.currentTab === tab.id ? 'active' : ''
+        }`;
+        tabButton.textContent = tab.label;
+        tabButton.addEventListener('click', () => this.switchTab(tab.id));
+
+        // Set initial visibility
+        const isVisible =
+          typeof tab.visible === 'function' ? tab.visible() : tab.visible;
+        tabButton.style.display = isVisible ? 'inline-block' : 'none';
+
+        tabContainer.appendChild(tabButton);
+      });
+
+      // Insert before upgrades container
+      const upgradesContainer = document.getElementById('upgradesContainer');
+      upgradesContainer.parentNode.insertBefore(
+        tabContainer,
+        upgradesContainer
+      );
+    }
+  }
+
+  switchTab(tabId) {
+    this.currentTab = tabId;
+
+    // Update tab button states
+    document.querySelectorAll('.tab-button').forEach((btn) => {
+      btn.classList.remove('active');
+    });
+    document.getElementById(`${tabId}Tab`).classList.add('active');
+
+    // Update content
+    this.updateTabContent();
+  }
+
+  updateTabContent() {
+    const container = this.elements.upgradesContainer;
+    container.innerHTML = '';
+
+    switch (this.currentTab) {
+      case 'upgrades':
+        this.createUpgradeCards();
+        break;
+      case 'prestige':
+        this.createPrestigeUpgradeCards();
+        break;
+      case 'cannons':
+        this.createCannonCards();
+        break;
+    }
+  }
+
+  createPrestigeUpgradeCards() {
+    if (!this.prestigeManager) return;
+
+    const container = this.elements.upgradesContainer;
+    const prestigeUpgrades = this.prestigeManager.getAllPrestigeUpgradeInfo();
+
+    for (const [upgradeType, upgradeInfo] of Object.entries(prestigeUpgrades)) {
+      const card = this.createPrestigeUpgradeCard(upgradeInfo);
+      container.appendChild(card);
+    }
+  }
+
+  createPrestigeUpgradeCard(upgradeInfo) {
+    const card = document.createElement('div');
+    card.className = 'upgrade-card prestige-upgrade-card';
+    card.dataset.upgradeType = upgradeInfo.type;
+
+    card.innerHTML = `
+      <div class="upgrade-name">${upgradeInfo.name}</div>
+      <div class="upgrade-level">Level: <span class="level-value">${
+        upgradeInfo.level
+      }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''}</div>
+      <div class="upgrade-cost">Cost: <span class="cost-value">${
+        upgradeInfo.costFormatted
+      }</span> 💎</div>
+      <div class="upgrade-effect">${upgradeInfo.description}</div>
+      <button class="upgrade-button" ${
+        !upgradeInfo.canAfford || upgradeInfo.isMaxed ? 'disabled' : ''
+      }>
+        ${upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE'}
+      </button>
+    `;
+
+    // Add click handler for upgrade button
+    const button = card.querySelector('.upgrade-button');
+    button.addEventListener('click', () => {
+      this.handlePrestigeUpgrade(upgradeInfo.type);
+    });
+
+    return card;
+  }
+
+  createCannonCards() {
+    if (!this.prestigeManager) return;
+
+    const container = this.elements.upgradesContainer;
+    const unlockedCannons = this.prestigeManager.getUnlockedCannons();
+    const selectedCannon = this.prestigeManager.getSelectedCannon();
+
+    unlockedCannons.forEach((cannon) => {
+      const card = this.createCannonCard(
+        cannon,
+        cannon.id === selectedCannon.id
+      );
+      container.appendChild(card);
+    });
+  }
+
+  createCannonCard(cannon, isSelected) {
+    const card = document.createElement('div');
+    card.className = `cannon-card ${isSelected ? 'selected' : ''}`;
+    card.dataset.cannonId = cannon.id;
+
+    card.innerHTML = `
+      <div class="cannon-name">${cannon.name}</div>
+      <div class="cannon-description">${cannon.description}</div>
+      <div class="cannon-status">${isSelected ? 'SELECTED' : 'AVAILABLE'}</div>
+      <button class="cannon-button" ${isSelected ? 'disabled' : ''}>
+        ${isSelected ? 'SELECTED' : 'SELECT'}
+      </button>
+    `;
+
+    // Add click handler for select button
+    const button = card.querySelector('.cannon-button');
+    button.addEventListener('click', () => {
+      this.handleCannonSelect(cannon.id);
+    });
+
+    return card;
+  }
+
+  handlePrestigeUpgrade(upgradeType) {
+    if (
+      this.prestigeManager &&
+      this.prestigeManager.purchasePrestigeUpgrade(upgradeType)
+    ) {
+      this.updateTabContent();
+      this.updateStats();
+      this.showUpgradeEffect(upgradeType, true);
+    }
+  }
+
+  handleCannonSelect(cannonId) {
+    if (this.prestigeManager && this.prestigeManager.selectCannon(cannonId)) {
+      this.updateTabContent();
+      // Notify game of cannon change if needed
+      console.log(
+        `Selected cannon: ${this.prestigeManager.getSelectedCannon().name}`
+      );
+    }
+  }
   createUpgradeCards() {
-    const upgradeTypes = ["fireRate", "size"];
+    const upgradeTypes = ['fireRate', 'size'];
 
     upgradeTypes.forEach((type) => {
       const card = this.createUpgradeCard(type);
@@ -79,8 +274,8 @@ class UIManager {
   createUpgradeCard(upgradeType) {
     const upgradeInfo = this.upgradeManager.getUpgradeInfo(upgradeType);
 
-    const card = document.createElement("div");
-    card.className = "upgrade-card";
+    const card = document.createElement('div');
+    card.className = 'upgrade-card';
     card.dataset.upgradeType = upgradeType;
 
     card.innerHTML = `
@@ -88,22 +283,22 @@ class UIManager {
             <div class="upgrade-level">Level: <span class="level-value">${
               upgradeInfo.level
             }</span>${
-      upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""
+      upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''
     }</div>
             <div class="upgrade-cost">Cost: $<span class="cost-value">${
               upgradeInfo.costFormatted
             }</span></div>
             <div class="upgrade-effect">${upgradeInfo.description}</div>
             <button class="upgrade-button" ${
-              !upgradeInfo.canAfford || upgradeInfo.isMaxed ? "disabled" : ""
+              !upgradeInfo.canAfford || upgradeInfo.isMaxed ? 'disabled' : ''
             }>
-                ${upgradeInfo.isMaxed ? "MAXED" : "UPGRADE"}
+                ${upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE'}
             </button>
         `;
 
     // Add click handler for upgrade button
-    const button = card.querySelector(".upgrade-button");
-    button.addEventListener("click", () => {
+    const button = card.querySelector('.upgrade-button');
+    button.addEventListener('click', () => {
       this.handleUpgrade(upgradeType);
     });
 
@@ -133,39 +328,45 @@ class UIManager {
     const upgradeInfo = this.upgradeManager.getUpgradeInfo(upgradeType);
 
     // Update values
-    card.querySelector(".level-value").textContent = upgradeInfo.level;
-    const levelDiv = card.querySelector(".upgrade-level");
+    card.querySelector('.level-value').textContent = upgradeInfo.level;
+    const levelDiv = card.querySelector('.upgrade-level');
     levelDiv.innerHTML = `Level: <span class="level-value">${
       upgradeInfo.level
-    }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""}`;
+    }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''}`;
 
-    card.querySelector(".cost-value").textContent = upgradeInfo.costFormatted;
-    card.querySelector(".upgrade-effect").textContent = upgradeInfo.description;
+    card.querySelector('.cost-value').textContent = upgradeInfo.costFormatted;
+    card.querySelector('.upgrade-effect').textContent = upgradeInfo.description;
 
     // Update button state
-    const button = card.querySelector(".upgrade-button");
+    const button = card.querySelector('.upgrade-button');
     button.disabled = !upgradeInfo.canAfford || upgradeInfo.isMaxed;
-    button.textContent = upgradeInfo.isMaxed ? "MAXED" : "UPGRADE";
+    button.textContent = upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE';
   }
 
   updateAllUpgradeCards() {
-    const upgradeTypes = ["fireRate", "size"];
+    const upgradeTypes = ['fireRate', 'size'];
     upgradeTypes.forEach((type) => {
       this.updateUpgradeCard(type);
     });
   }
 
-  showUpgradeEffect(upgradeType) {
-    const card = document.querySelector(`[data-upgrade-type="${upgradeType}"]`);
+  showUpgradeEffect(upgradeType, isPrestige = false) {
+    const selector = isPrestige
+      ? `[data-upgrade-type="${upgradeType}"]`
+      : `[data-upgrade-type="${upgradeType}"]`;
+    const card = document.querySelector(selector);
     if (!card) return;
 
     // Add visual effect
-    card.style.transform = "scale(1.05)";
-    card.style.boxShadow = "0 0 20px rgba(76, 175, 80, 0.5)";
+    card.style.transform = 'scale(1.05)';
+    const color = isPrestige
+      ? 'rgba(128, 0, 128, 0.5)'
+      : 'rgba(76, 175, 80, 0.5)';
+    card.style.boxShadow = `0 0 20px ${color}`;
 
     setTimeout(() => {
-      card.style.transform = "";
-      card.style.boxShadow = "";
+      card.style.transform = '';
+      card.style.boxShadow = '';
     }, 300);
   }
 
@@ -181,10 +382,34 @@ class UIManager {
     const streak = this.upgradeManager.getStreakProgress();
     this.elements.streakMultiplier.textContent = `${streak.multiplier}`;
 
-    // Update world name display
+    // Update prestige stats if available
+    if (this.prestigeManager) {
+      const prestigeValues = this.prestigeManager.getDisplayValues();
+      if (this.elements.gemsAmount) {
+        this.elements.gemsAmount.textContent = prestigeValues.gems;
+      }
+      if (this.elements.prestigeLevel) {
+        this.elements.prestigeLevel.textContent = prestigeValues.prestigeLevel;
+      }
+
+      // Show/hide prestige UI elements
+      const showPrestige = this.prestigeManager.prestigeLevel > 0;
+      if (this.elements.gemsDisplay) {
+        this.elements.gemsDisplay.style.display = showPrestige
+          ? 'block'
+          : 'none';
+      }
+      if (this.elements.prestigeLevelDisplay) {
+        this.elements.prestigeLevelDisplay.style.display = showPrestige
+          ? 'block'
+          : 'none';
+      }
+    }
+
+    // Update world name display (include prestige level if available)
     if (this.worldManager && this.elements.worldName) {
-      this.elements.worldName.textContent =
-        this.worldManager.getWorldProgressText();
+      let worldText = this.worldManager.getWorldProgressText();
+      this.elements.worldName.textContent = worldText;
     }
 
     // Update world progression display if element exists
@@ -198,11 +423,37 @@ class UIManager {
         this.worldManager.getCompletionProgressText(this.upgradeManager);
     }
 
-    // Update upgrade affordability
-    this.updateAllUpgradeCards();
+    // Update tab visibility
+    this.updateTabVisibility();
+
+    // Update current tab content
+    if (this.currentTab === 'prestige') {
+      this.updateTabContent();
+    } else if (this.currentTab === 'cannons') {
+      this.updateTabContent();
+    } else {
+      // Update regular upgrade affordability
+      this.updateAllUpgradeCards();
+    }
 
     // Update HUD visibility (in case affordability changed)
     this.updateHUDVisibility();
+  }
+
+  updateTabVisibility() {
+    // Show/hide prestige and cannon tabs based on prestige level
+    const prestigeTab = document.getElementById('prestigeTab');
+    const cannonsTab = document.getElementById('cannonsTab');
+
+    const showPrestigeTabs =
+      this.prestigeManager && this.prestigeManager.prestigeLevel > 0;
+
+    if (prestigeTab) {
+      prestigeTab.style.display = showPrestigeTabs ? 'inline-block' : 'none';
+    }
+    if (cannonsTab) {
+      cannonsTab.style.display = showPrestigeTabs ? 'inline-block' : 'none';
+    }
   }
 
   toggleHUD() {
@@ -217,7 +468,7 @@ class UIManager {
 
   // Check if any upgrade is affordable
   canAffordAnyUpgrade() {
-    const upgradeTypes = ["fireRate", "size"];
+    const upgradeTypes = ['fireRate', 'size'];
     return upgradeTypes.some((type) => {
       const upgradeInfo = this.upgradeManager.getUpgradeInfo(type);
       return upgradeInfo.canAfford && !upgradeInfo.isMaxed;
@@ -226,29 +477,29 @@ class UIManager {
 
   updateHUDVisibility() {
     if (this.isHidden) {
-      this.elements.hud.classList.add("hidden");
+      this.elements.hud.classList.add('hidden');
 
       // Check if any upgrade is affordable to add asterisk
       const canAffordAny = this.canAffordAnyUpgrade();
       this.elements.hudToggle.textContent = canAffordAny
-        ? "Show HUD*"
-        : "Show HUD";
+        ? 'Show HUD*'
+        : 'Show HUD';
       this.elements.showHudButton.textContent = canAffordAny
-        ? "Show HUD*"
-        : "Show HUD";
+        ? 'Show HUD*'
+        : 'Show HUD';
 
-      this.elements.showHudButton.classList.add("visible");
+      this.elements.showHudButton.classList.add('visible');
     } else {
-      this.elements.hud.classList.remove("hidden");
-      this.elements.hudToggle.textContent = "Hide HUD";
-      this.elements.showHudButton.classList.remove("visible");
+      this.elements.hud.classList.remove('hidden');
+      this.elements.hudToggle.textContent = 'Hide HUD';
+      this.elements.showHudButton.classList.remove('visible');
     }
   }
 
   showMoneyEarned(amount, x, y) {
     // Create floating money text
-    const moneyText = document.createElement("div");
-    moneyText.className = "floating-money";
+    const moneyText = document.createElement('div');
+    moneyText.className = 'floating-money';
     moneyText.textContent = `+$${formatNumber(amount)}`;
     moneyText.style.cssText = `
             position: fixed;
@@ -264,9 +515,9 @@ class UIManager {
         `;
 
     // Add animation keyframes if not already added
-    if (!document.querySelector("#floating-money-style")) {
-      const style = document.createElement("style");
-      style.id = "floating-money-style";
+    if (!document.querySelector('#floating-money-style')) {
+      const style = document.createElement('style');
+      style.id = 'floating-money-style';
       style.textContent = `
                 @keyframes floatUp {
                     0% {
@@ -293,8 +544,8 @@ class UIManager {
   }
 
   // Show notification messages
-  showNotification(message, type = "info") {
-    const notification = document.createElement("div");
+  showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
     notification.style.cssText = `
@@ -302,11 +553,11 @@ class UIManager {
             top: 20px;
             right: 20px;
             background: ${
-              type === "success"
-                ? "#4CAF50"
-                : type === "error"
-                ? "#f44336"
-                : "#2196F3"
+              type === 'success'
+                ? '#4CAF50'
+                : type === 'error'
+                ? '#f44336'
+                : '#2196F3'
             };
             color: white;
             padding: 12px 20px;
@@ -322,14 +573,14 @@ class UIManager {
 
     // Animate in
     setTimeout(() => {
-      notification.style.opacity = "1";
-      notification.style.transform = "translateX(0)";
+      notification.style.opacity = '1';
+      notification.style.transform = 'translateX(0)';
     }, 10);
 
     // Animate out and remove
     setTimeout(() => {
-      notification.style.opacity = "0";
-      notification.style.transform = "translateX(100%)";
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateX(100%)';
 
       setTimeout(() => {
         if (notification.parentNode) {
@@ -341,7 +592,7 @@ class UIManager {
 
   // Get canvas coordinates for money earned display
   getCanvasPosition(canvasX, canvasY) {
-    const canvas = document.getElementById("gameCanvas");
+    const canvas = document.getElementById('gameCanvas');
     const rect = canvas.getBoundingClientRect();
 
     return {
@@ -360,48 +611,46 @@ class UIManager {
   // Handle reset progress with confirmation
   handleResetProgress() {
     const confirmed = confirm(
-      "Are you sure you want to reset all progress?\n\n" +
-        "This will permanently delete:\n" +
-        "• All money and upgrades\n" +
-        "• Statistics and achievements\n" +
-        "• Saved game data\n\n" +
-        "This action cannot be undone!"
+      'Are you sure you want to reset ALL progress?\n\n' +
+        'This will permanently delete:\n' +
+        '• All money and upgrades\n' +
+        '• World progression\n' +
+        '• Prestige level and gems\n' +
+        '• Statistics and saved data\n\n' +
+        'This action cannot be undone!'
     );
 
     if (confirmed) {
-      // Reset the upgrade manager
-      this.upgradeManager.resetProgress();
+      // Reset everything through the game
+      if (this.game) {
+        this.game.resetAllProgress();
+      } else {
+        // Fallback if game reference not available
+        this.upgradeManager.resetProgress();
+        if (this.worldManager) this.worldManager.resetProgress();
+        if (this.prestigeManager) this.prestigeManager.resetProgress();
+      }
 
       // Update the UI immediately
       this.updateStats();
-      this.updateAllUpgradeCards();
+      this.updateTabContent();
 
       // Show confirmation message
-      this.showNotification("Progress has been reset!", "success");
-
-      // Notify the game to reset cannon upgrades
-      if (this.cannon) {
-        this.cannon.upgrades = {
-          fireRate: 0,
-          size: 0,
-          speed: 0,
-          accuracy: 0,
-        };
-      }
+      this.showNotification('All progress has been reset!', 'success');
     }
   }
 
   // Show notification messages
-  showNotification(message, type = "info") {
+  showNotification(message, type = 'info') {
     // Simple notification - could be enhanced with a proper notification system
     console.log(`[${type.toUpperCase()}] ${message}`);
   }
 
   // Show custom modal overlay
-  showModal(title, subtitle = "", buttonText = "Continue", onConfirm = null) {
+  showModal(title, subtitle = '', buttonText = 'Continue', onConfirm = null) {
     // Create modal overlay
-    const overlay = document.createElement("div");
-    overlay.className = "game-modal-overlay";
+    const overlay = document.createElement('div');
+    overlay.className = 'game-modal-overlay';
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -417,8 +666,8 @@ class UIManager {
     `;
 
     // Create modal content
-    const modal = document.createElement("div");
-    modal.className = "game-modal";
+    const modal = document.createElement('div');
+    modal.className = 'game-modal';
     modal.style.cssText = `
       background: linear-gradient(135deg, #2c3e50, #34495e);
       border: 3px solid #f39c12;
@@ -432,7 +681,7 @@ class UIManager {
     `;
 
     // Add CSS animation
-    const style = document.createElement("style");
+    const style = document.createElement('style');
     style.textContent = `
       @keyframes modalSlideIn {
         from {
@@ -448,7 +697,7 @@ class UIManager {
     document.head.appendChild(style);
 
     // Create title
-    const titleElement = document.createElement("h1");
+    const titleElement = document.createElement('h1');
     titleElement.textContent = title;
     titleElement.style.cssText = `
       color: #f39c12;
@@ -460,7 +709,7 @@ class UIManager {
     // Create subtitle if provided
     let subtitleElement = null;
     if (subtitle) {
-      subtitleElement = document.createElement("p");
+      subtitleElement = document.createElement('p');
       subtitleElement.textContent = subtitle;
       subtitleElement.style.cssText = `
         color: #ecf0f1;
@@ -471,7 +720,7 @@ class UIManager {
     }
 
     // Create button
-    const button = document.createElement("button");
+    const button = document.createElement('button');
     button.textContent = buttonText;
     button.style.cssText = `
       background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -489,18 +738,18 @@ class UIManager {
     `;
 
     // Button hover effects
-    button.addEventListener("mouseenter", () => {
-      button.style.transform = "translateY(-2px)";
-      button.style.boxShadow = "0 6px 20px rgba(231, 76, 60, 0.6)";
+    button.addEventListener('mouseenter', () => {
+      button.style.transform = 'translateY(-2px)';
+      button.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.6)';
     });
 
-    button.addEventListener("mouseleave", () => {
-      button.style.transform = "translateY(0)";
-      button.style.boxShadow = "0 4px 15px rgba(231, 76, 60, 0.4)";
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'translateY(0)';
+      button.style.boxShadow = '0 4px 15px rgba(231, 76, 60, 0.4)';
     });
 
     // Button click handler
-    button.addEventListener("click", () => {
+    button.addEventListener('click', () => {
       document.body.removeChild(overlay);
       document.head.removeChild(style);
       if (onConfirm) {
@@ -524,16 +773,32 @@ class UIManager {
 
     // Allow ESC key to close modal
     const handleEscape = (e) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         document.body.removeChild(overlay);
         document.head.removeChild(style);
-        document.removeEventListener("keydown", handleEscape);
+        document.removeEventListener('keydown', handleEscape);
         if (onConfirm) {
           onConfirm();
         }
       }
     };
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener('keydown', handleEscape);
+  }
+
+  // Handle prestige event
+  onPrestige() {
+    // Switch to upgrades tab
+    this.switchTab('upgrades');
+
+    // Update all UI elements
+    this.updateStats();
+    this.updateTabVisibility();
+
+    // Show celebration notification
+    this.showNotification(
+      'Prestige achieved! Welcome to the multiverse!',
+      'success'
+    );
   }
 }
 

@@ -1,301 +1,405 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Idle Cannon - Medieval Castle Destroyer</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background: linear-gradient(to bottom, #87ceeb 0%, #4169e1 100%);
-        font-family: "Arial", sans-serif;
-        overflow: hidden;
-      }
 
-      #gameContainer {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Idle Cannon - Medieval Castle Destroyer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom, #87ceeb 0%, #4169e1 100%);
+      font-family: "Arial", sans-serif;
+      overflow: hidden;
+    }
 
-      #gameCanvas {
-        border: 2px solid #654321;
-        border-radius: 8px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        background: linear-gradient(to bottom, #87ceeb 0%, #32cd32 80%);
-      }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-      #hud {
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        font-size: 14px;
-        max-width: 90%;
-        width: auto;
-        transition: all 0.3s ease;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
+    #gameCanvas {
+      border: 2px solid #654321;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(to bottom, #87ceeb 0%, #32cd32 80%);
+    }
 
-      #hud.hidden {
-        transform: translateX(-50%) translateY(-100%);
-        opacity: 0;
-      }
+    #hud {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      max-width: 90%;
+      width: auto;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-      .hud-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-        width: 100%;
-      }
+    #hud.hidden {
+      transform: translateX(-50%) translateY(-100%);
+      opacity: 0;
+    }
 
-      .hud-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-      }
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      width: 100%;
+    }
 
-      .stats-section {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding-bottom: 10px;
-        margin-bottom: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-items: center;
-        gap: 15px;
-        width: 100%;
-      }
+    .hud-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
 
-      .money-display {
-        font-size: 24px;
-        font-weight: bold;
-        color: #ffd700;
-      }
+    .stats-section {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+    }
 
-      .hide-button {
-        background: #444;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-      }
+    .money-display {
+      font-size: 24px;
+      font-weight: bold;
+      color: #ffd700;
+    }
 
-      .hide-button:hover {
-        background: #666;
-      }
+    .gems-display {
+      font-size: 24px;
+      font-weight: bold;
+      color: #3063da;
+      margin-left: 15px;
+    }
 
-      .upgrades-container {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        margin-bottom: 15px;
-        width: 100%;
-      }
+    .hide-button {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-      .upgrade-card {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
+    .hide-button:hover {
+      background: #666;
+    }
 
-      .upgrade-name {
-        font-weight: bold;
-        margin-bottom: 5px;
-      }
+    .tab-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
 
-      .upgrade-level {
-        font-size: 12px;
-        color: #ccc;
-        margin-bottom: 5px;
-      }
+    .tab-button {
+      background: #555;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      margin: 0 2px;
+      border-radius: 5px 5px 5px 5px;
+      cursor: pointer;
+      font-size: 12px;
+    }
 
-      .upgrade-cost {
-        font-size: 12px;
-        color: #ffd700;
-        margin-bottom: 8px;
-      }
+    .tab-button:hover {
+      background: #666;
+    }
 
-      .upgrade-button {
-        width: 100%;
-        padding: 6px;
-        background: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 12px;
-      }
+    .tab-button.active {
+      background: #ffd700;
+      color: #131111;
+    }
 
-      .upgrade-button:hover {
-        background: #45a049;
-      }
+    .prestige-upgrade-card {
+      border: 2px solid #9c27b0;
+      background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+    }
 
-      .upgrade-button:disabled {
-        background: #666;
-        cursor: not-allowed;
-      }
+    .cannon-card {
+      background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+      color: white;
+      border: 2px solid #444;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 5px;
+      text-align: center;
+      cursor: pointer;
+    }
 
-      .stats-section {
-        border-top: 1px solid rgba(255, 255, 255, 0.2);
-        padding-top: 15px;
-      }
+    .cannon-card:hover {
+      border-color: #666;
+    }
 
-      .stat-item {
-        margin-bottom: 0;
-        font-size: 12px;
-        text-align: center;
-        white-space: nowrap;
-      }
+    .cannon-card.selected {
+      border-color: #4caf50;
+      background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    }
 
-      .stat-label {
-        color: #ccc;
-      }
+    .cannon-name {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
 
-      .stat-value {
-        color: #ffd700;
-        font-weight: bold;
-      }
+    .cannon-description {
+      font-size: 12px;
+      color: #ccc;
+      margin-bottom: 10px;
+    }
 
-      .reset-button {
-        background: #f44336;
-        color: white;
-        border: none;
-        padding: 4px 8px;
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 11px;
-        white-space: nowrap;
-      }
+    .cannon-status {
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
 
-      .reset-button:hover {
-        background: #d32f2f;
-      }
+    .cannon-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
 
-      .show-hud-button {
-        position: absolute;
-        top: 65px;
-        left: 85px;
-        background: rgba(0, 0, 0, 0.8);
-        color: rgb(220, 220, 220);
-        border: none;
-        padding: 7px 9px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        z-index: 1001;
-        display: none;
-        transition: all 0.3s ease;
-      }
+    .cannon-button:hover {
+      background: #0056b3;
+    }
 
-      .show-hud-button:hover {
-        background: rgba(0, 0, 0, 0.9);
-      }
+    .cannon-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
 
-      .show-hud-button.visible {
-        display: block;
-      }
+    .upgrades-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+      width: 100%;
+    }
 
-      .world-display {
-        position: absolute;
-        top: 20px;
-        left: 50px;
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
-        z-index: 1000;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-      }
+    .upgrade-card {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
 
-      .world-display .world-name {
-        color: #ffd700;
-      }
-    </style>
-  </head>
+    .upgrade-name {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
 
-  <body>
-    <div id="gameContainer">
-      <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    .upgrade-level {
+      font-size: 12px;
+      color: #ccc;
+      margin-bottom: 5px;
+    }
 
-      <!-- World Display at top left -->
-      <div class="world-display" id="worldDisplay">
-        <span class="world-name" id="worldName">World 1: Earth</span>
+    .upgrade-cost {
+      font-size: 12px;
+      color: #ffd700;
+      margin-bottom: 8px;
+    }
+
+    .upgrade-button {
+      width: 100%;
+      padding: 6px;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .upgrade-button:hover {
+      background: #45a049;
+    }
+
+    .upgrade-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+
+    .stats-section {
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 15px;
+    }
+
+    .stat-item {
+      margin-bottom: 0;
+      font-size: 12px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .stat-label {
+      color: #ccc;
+    }
+
+    .stat-value {
+      color: #ffd700;
+      font-weight: bold;
+    }
+
+    .reset-button {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .reset-button:hover {
+      background: #d32f2f;
+    }
+
+    .show-hud-button {
+      position: absolute;
+      top: 65px;
+      left: 85px;
+      background: rgba(0, 0, 0, 0.8);
+      color: rgb(220, 220, 220);
+      border: none;
+      padding: 7px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      z-index: 1001;
+      display: none;
+      transition: all 0.3s ease;
+    }
+
+    .show-hud-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+    }
+
+    .show-hud-button.visible {
+      display: block;
+    }
+
+    .world-display {
+      position: absolute;
+      top: 20px;
+      left: 50px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 1000;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .world-display .world-name {
+      color: #ffd700;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+
+    <!-- World Display at top left -->
+    <div class="world-display" id="worldDisplay">
+      <span class="world-name" id="worldName">World 1: Earth</span>
+    </div>
+
+    <!-- Persistent Show HUD button (only visible when HUD is hidden) -->
+    <button class="show-hud-button" id="showHudButton">Show HUD</button>
+
+    <div id="hud">
+      <div class="hud-header">
+        <div class="money-display">💰 $<span id="moneyAmount">0</span></div>
+        <div class="gems-display" id="gemsDisplay" style="display: none;">💎 <span id="gemsAmount">0</span></div>
+        <button class="hide-button" id="hudToggle">Hide HUD</button>
       </div>
 
-      <!-- Persistent Show HUD button (only visible when HUD is hidden) -->
-      <button class="show-hud-button" id="showHudButton">Show HUD</button>
-
-      <div id="hud">
-        <div class="hud-header">
-          <div class="money-display">💰 $<span id="moneyAmount">0</span></div>
-          <button class="hide-button" id="hudToggle">Hide HUD</button>
+      <div class="hud-content">
+        <div class="stats-section">
+          <div class="stat-item">
+            <span class="stat-label">World:</span>
+            <span class="stat-value" id="worldName">World 1: Earth</span>
+          </div>
+          <div class="stat-item" id="prestigeLevelDisplay" style="display: none;">
+            <span class="stat-label">Prestige:</span>
+            <span class="stat-value">Level <span id="prestigeLevel">0</span></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Earned:</span>
+            <span class="stat-value">$<span id="totalEarned">0</span></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Streak Bonus:</span>
+            <span class="stat-value"><span id="streakMultiplier">1</span>x</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Castles Destroyed:</span>
+            <span class="stat-value"><span id="castlesDestroyed">0</span></span>
+          </div>
+          <div class="stat-item">
+            <button class="reset-button" id="resetProgress">
+              Reset Progress
+            </button>
+          </div>
         </div>
 
-        <div class="hud-content">
-          <div class="stats-section">
-            <div class="stat-item">
-              <span class="stat-label">Total Earned:</span>
-              <span class="stat-value">$<span id="totalEarned">0</span></span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Streak Bonus:</span>
-              <span class="stat-value"
-                ><span id="streakMultiplier">1</span>x</span
-              >
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Castles Destroyed:</span>
-              <span class="stat-value"
-                ><span id="castlesDestroyed">0</span></span
-              >
-            </div>
-            <div class="stat-item">
-              <button class="reset-button" id="resetProgress">
-                Reset Progress
-              </button>
-            </div>
-          </div>
-
-          <div class="upgrades-container" id="upgradesContainer">
-            <!-- Upgrade cards will be dynamically generated -->
-          </div>
+        <div class="upgrades-container" id="upgradesContainer">
+          <!-- Upgrade cards will be dynamically generated -->
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Matter.js Physics Engine -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <!-- Matter.js Physics Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
-    <!-- Game Scripts -->
-    <script type="module" src="js/config.js"></script>
-    <script type="module" src="js/utils.js"></script>
-    <script type="module" src="js/particles.js"></script>
-    <script type="module" src="js/physics.js"></script>
-    <script type="module" src="js/trajectoryUtils.js"></script>
-    <script type="module" src="js/cannon.js"></script>
-    <script type="module" src="js/castle.js"></script>
-    <script type="module" src="js/upgrades.js"></script>
-    <script type="module" src="js/worldManager.js"></script>
-    <script type="module" src="js/firingTableBuilder.js"></script>
-    <script type="module" src="js/ui.js"></script>
-    <script type="module" src="js/main.js"></script>
-  </body>
+  <!-- Game Scripts -->
+  <script type="module" src="js/config.js"></script>
+  <script type="module" src="js/utils.js"></script>
+  <script type="module" src="js/particles.js"></script>
+  <script type="module" src="js/physics.js"></script>
+  <script type="module" src="js/trajectoryUtils.js"></script>
+  <script type="module" src="js/cannon.js"></script>
+  <script type="module" src="js/castle.js"></script>
+  <script type="module" src="js/upgrades.js"></script>
+  <script type="module" src="js/prestige.js"></script>
+  <script type="module" src="js/worldManager.js"></script>
+  <script type="module" src="js/firingTableBuilder.js"></script>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+
 </html>
