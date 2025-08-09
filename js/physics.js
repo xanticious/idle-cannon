@@ -56,8 +56,10 @@ class PhysicsWorld {
     return cannonball;
   }
 
-  createBlock(x, y, width, height, material) {
+  createBlock(x, y, width, height, material, shape = "square") {
     const isWood = material === MATERIALS.WOOD;
+
+    // Only create rectangles since we're only using squares
     const block = Matter.Bodies.rectangle(x, y, width, height, {
       density: isWood ? 0.001 : 0.002,
       restitution: 0.1,
@@ -69,6 +71,7 @@ class PhysicsWorld {
 
     // Add custom properties
     block.material = material;
+    block.shape = shape;
     block.health = isWood
       ? CONFIG.PHYSICS.WOOD_HEALTH
       : CONFIG.PHYSICS.STONE_HEALTH;
@@ -79,6 +82,45 @@ class PhysicsWorld {
     this.blocks.push(block);
 
     return block;
+  }
+
+  createCompoundBlock(x, y, blockPositions, material, shape) {
+    const isWood = material === MATERIALS.WOOD;
+    const blockSize = CONFIG.PHYSICS.BLOCK_SIZE;
+
+    // Create individual rectangles for each block position
+    const bodies = blockPositions.map((pos) => {
+      const blockX = x + pos.x * blockSize;
+      const blockY = y + pos.y * blockSize;
+
+      return Matter.Bodies.rectangle(blockX, blockY, blockSize, blockSize, {
+        density: isWood ? 0.001 : 0.002,
+        restitution: 0.1,
+        friction: 0.8,
+        render: {
+          fillStyle: isWood ? CONFIG.COLORS.WOOD : CONFIG.COLORS.STONE,
+        },
+      });
+    });
+
+    // Create compound body from the individual rectangles
+    const compoundBody = Matter.Body.create({
+      parts: bodies,
+    });
+
+    // Add custom properties
+    compoundBody.material = material;
+    compoundBody.shape = shape;
+    compoundBody.health = isWood
+      ? CONFIG.PHYSICS.WOOD_HEALTH * blockPositions.length // More health for bigger shapes
+      : CONFIG.PHYSICS.STONE_HEALTH * blockPositions.length;
+    compoundBody.maxHealth = compoundBody.health;
+
+    // Add to world and track
+    Matter.World.add(this.world, compoundBody);
+    this.blocks.push(compoundBody);
+
+    return compoundBody;
   }
 
   update() {

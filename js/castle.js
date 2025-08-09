@@ -3,11 +3,12 @@ import { CONFIG, MATERIALS } from "./config.js";
 import { randomInt, randomFloat, randomChoice } from "./utils.js";
 
 class Block {
-  constructor(x, y, material, physicsBody) {
+  constructor(x, y, material, physicsBody, shape = "square") {
     this.x = x;
     this.y = y;
     this.material = material;
     this.body = physicsBody;
+    this.shape = shape;
     this.health = physicsBody.health;
     this.maxHealth = physicsBody.maxHealth;
     this.isDestroyed = false;
@@ -57,6 +58,42 @@ class Block {
 
       ctx.restore();
     }
+
+    // Render flag if this block has one
+    if (this.hasFlag) {
+      this.renderFlag(ctx);
+    }
+  }
+
+  renderFlag(ctx) {
+    const pos = this.body.position;
+    const blockSize = CONFIG.PHYSICS.BLOCK_SIZE;
+
+    // Calculate flag position relative to the block's center
+    const flagX = pos.x;
+    const flagY = pos.y - blockSize / 2; // Top of the block
+
+    // Flag pole (black line)
+    ctx.strokeStyle = "#333333";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(flagX, flagY);
+    ctx.lineTo(flagX, flagY - 25); // Flag pole is 25 pixels tall
+    ctx.stroke();
+
+    // Flag (red triangle)
+    ctx.fillStyle = "#FF0000";
+    ctx.beginPath();
+    ctx.moveTo(flagX, flagY - 25); // Top of pole
+    ctx.lineTo(flagX + 15, flagY - 20); // Right point of flag
+    ctx.lineTo(flagX, flagY - 15); // Bottom of flag attachment
+    ctx.closePath();
+    ctx.fill();
+
+    // Flag outline
+    ctx.strokeStyle = "#CC0000";
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
 }
 
@@ -71,6 +108,9 @@ class Castle {
     this.destructionTime = 0;
     this.fadingOut = false;
     this.fadeAlpha = 1.0;
+
+    // Flag tracking
+    this.flagBlock = null; // Will store the block that has the flag
 
     // Damage tracking for fallback destruction
     this.lastDamageTime = Date.now();
@@ -99,7 +139,14 @@ class Castle {
     // Generate castle structure
     const structure = this.generateStructure(width, height);
 
-    // Create physics blocks
+    // Find the highest blocks and select one for the flag
+    const maxY = Math.max(...structure.map((block) => block.y));
+    const topBlocks = structure.filter((block) => block.y === maxY);
+    const flagBlockData =
+      topBlocks[Math.floor(Math.random() * topBlocks.length)];
+    flagBlockData.hasFlag = true; // Mark this block as having a flag
+
+    // Create physics blocks (all are single 1x1 blocks now)
     for (const blockData of structure) {
       const blockX =
         this.x + (blockData.x - width / 2) * CONFIG.PHYSICS.BLOCK_SIZE;
@@ -110,10 +157,24 @@ class Castle {
         blockY,
         CONFIG.PHYSICS.BLOCK_SIZE,
         CONFIG.PHYSICS.BLOCK_SIZE,
-        blockData.material
+        blockData.material,
+        blockData.shape
       );
 
-      const block = new Block(blockX, blockY, blockData.material, physicsBody);
+      const block = new Block(
+        blockX,
+        blockY,
+        blockData.material,
+        physicsBody,
+        blockData.shape
+      );
+
+      // Mark this block as having a flag if it was selected
+      if (blockData.hasFlag) {
+        block.hasFlag = true;
+        this.flagBlock = block;
+      }
+
       this.blocks.push(block);
     }
 
@@ -123,53 +184,196 @@ class Castle {
 
   generateStructure(width, height) {
     const structure = [];
+    const occupiedGrid = Array(height)
+      .fill(null)
+      .map(() => Array(width).fill(false));
 
-    // Generate base layer (always full for stability)
+    // Track piece counts for balancing
+    const pieceCounts = {
+      square1x1: 0,
+      circle1x1: 0,
+    };
+
+    // Generate base layer (always full stone for stability)
     for (let x = 0; x < width; x++) {
       structure.push({
         x: x,
         y: 0,
-        material: MATERIALS.STONE, // Base is always stone for stability
+        material: MATERIALS.STONE,
+        shape: "square",
       });
+      occupiedGrid[0][x] = true;
     }
+    pieceCounts.square1x1 += width;
 
-    // Generate upper layers with decreasing probability
+    // Generate upper layers with decreasing probability (creates towers and spires)
     for (let y = 1; y < height; y++) {
-      // Probability decreases with height, but maintains some structure
-      const baseProbability = Math.max(0.3, 1 - y / (height + 2));
+      // Probability decreases with height to create natural tower shapes
+      const baseProbability = 0.4;
 
       for (let x = 0; x < width; x++) {
-        let probability = baseProbability;
+        if (occupiedGrid[y][x]) continue; // Already occupied
 
-        // Increase probability if there's support below
-        const hasSupport = structure.some(
-          (block) => block.x === x && block.y === y - 1
+        if (Math.random() > baseProbability) continue;
+
+        // Get possible pieces (1x1 square or circle)
+        const possiblePieces = this.getPossiblePieces(
+          x,
+          y,
+          width,
+          height,
+          occupiedGrid
         );
-        if (hasSupport) {
-          probability = Math.min(0.9, probability + 0.3);
-        }
 
-        // Slightly increase probability for edge pieces (walls)
-        if (x === 0 || x === width - 1) {
-          probability = Math.min(0.8, probability + 0.2);
-        }
+        if (possiblePieces.length === 0) continue;
 
-        if (Math.random() < probability) {
-          // Material selection: more wood at higher levels
-          const woodProbability = Math.min(0.8, 0.4 + (y / height) * 0.4);
-          const material =
-            Math.random() < woodProbability ? MATERIALS.WOOD : MATERIALS.STONE;
+        // Select piece with simple balancing
+        const selectedPiece = this.selectPieceWithBalancing(
+          possiblePieces,
+          pieceCounts
+        );
 
-          structure.push({
-            x: x,
-            y: y,
-            material: material,
-          });
+        if (
+          selectedPiece &&
+          this.canPlacePiece(selectedPiece, x, y, occupiedGrid)
+        ) {
+          const placedBlocks = this.placePiece(
+            selectedPiece,
+            x,
+            y,
+            occupiedGrid,
+            structure
+          );
+          pieceCounts[selectedPiece.type]++;
         }
       }
     }
 
     return structure;
+  }
+
+  getPossiblePieces(x, y, width, height, occupiedGrid) {
+    const pieces = [];
+
+    // 1x1 Square (always available if we have support)
+    pieces.push({ type: "square1x1", width: 1, height: 1, shape: "square" });
+
+    // 1x1 Circle (only if not at leftmost or rightmost column)
+    if (x > 0 && x < width - 1) {
+      pieces.push({ type: "circle1x1", width: 1, height: 1, shape: "circle" });
+    }
+
+    return pieces;
+  }
+
+  hasSupport(x, y, pieceWidth, pieceHeight, occupiedGrid) {
+    if (y === 0) return true; // Ground level
+
+    // Check if there's at least one block supporting this piece from below
+    for (let px = x; px < x + pieceWidth; px++) {
+      if (occupiedGrid[y - 1] && occupiedGrid[y - 1][px]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  spaceAvailable(x, y, width, height, occupiedGrid) {
+    for (let py = y; py < y + height; py++) {
+      for (let px = x; px < x + width; px++) {
+        if (occupiedGrid[py] && occupiedGrid[py][px]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  selectPieceWithBalancing(possiblePieces, pieceCounts) {
+    if (possiblePieces.length === 0) return null;
+
+    // Calculate total pieces placed
+    const totalPieces = Object.values(pieceCounts).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    // If we don't have many pieces yet, use simple random selection
+    if (totalPieces < 10) {
+      const randomIndex = Math.floor(Math.random() * possiblePieces.length);
+      return possiblePieces[randomIndex];
+    }
+
+    // Base probability for each piece type
+    const baseProbability = 1.0;
+
+    // Adjust probabilities based on how many of each type we've used
+    const weightedPieces = possiblePieces.map((piece) => {
+      const currentCount = pieceCounts[piece.type] || 0;
+      const expectedRatio = 1.0 / Object.keys(pieceCounts).length; // Equal distribution
+      const actualRatio = totalPieces > 0 ? currentCount / totalPieces : 0;
+
+      // Reduce probability if we've used too many of this type
+      let weight = baseProbability;
+      if (actualRatio > expectedRatio * 1.5) {
+        weight *= 0.3; // Reduce probability significantly
+      } else if (actualRatio > expectedRatio) {
+        weight *= 0.7; // Reduce probability moderately
+      } else if (actualRatio < expectedRatio * 0.5) {
+        weight *= 1.5; // Increase probability for underused pieces
+      }
+
+      return { piece, weight };
+    });
+
+    // Select randomly based on weights
+    const totalWeight = weightedPieces.reduce((sum, wp) => sum + wp.weight, 0);
+    if (totalWeight <= 0) {
+      // Fallback to random selection
+      const randomIndex = Math.floor(Math.random() * possiblePieces.length);
+      return possiblePieces[randomIndex];
+    }
+
+    let random = Math.random() * totalWeight;
+
+    for (const wp of weightedPieces) {
+      random -= wp.weight;
+      if (random <= 0) {
+        return wp.piece;
+      }
+    }
+
+    // Fallback to first piece
+    return possiblePieces[0];
+  }
+
+  placePiece(piece, x, y, occupiedGrid, structure) {
+    const placedBlocks = [];
+    const material = Math.random() < 0.5 ? MATERIALS.WOOD : MATERIALS.STONE;
+
+    // All pieces are 1x1, so no grouping needed
+    occupiedGrid[y][x] = true;
+
+    const structureBlock = {
+      x: x,
+      y: y,
+      material: material,
+      shape: piece.shape,
+    };
+    structure.push(structureBlock);
+    placedBlocks.push(structureBlock);
+
+    return placedBlocks;
+  }
+
+  canPlacePiece(piece, x, y, occupiedGrid) {
+    // Check if space is available for rectangular shape
+    for (let py = y; py < y + piece.height; py++) {
+      for (let px = x; px < x + piece.width; px++) {
+        if (occupiedGrid[py] && occupiedGrid[py][px]) return false;
+      }
+    }
+    return true;
   }
 
   calculateReward(width, height, blockCount) {

@@ -21,10 +21,10 @@ export const CONFIG = {
   CASTLE: {
     X: 900,
     Y: 450,
-    MIN_WIDTH: 4,
-    MAX_WIDTH: 8,
-    MIN_HEIGHT: 4,
-    MAX_HEIGHT: 10,
+    MIN_WIDTH: 8,
+    MAX_WIDTH: 12,
+    MIN_HEIGHT: 12,
+    MAX_HEIGHT: 15,
     BASE_REWARD: 15,
   },
 
