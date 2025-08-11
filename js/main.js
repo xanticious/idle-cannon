@@ -1,15 +1,15 @@
 // Main game class and initialization
-import { CONFIG, GAME_STATES } from './config.js';
-import { PerformanceMonitor } from './utils.js';
-import Cannon from './cannon.js';
-import Castle from './castle.js';
-import PhysicsWorld from './physics.js';
-import ParticleSystem from './particles.js';
-import UpgradeManager from './upgrades.js';
-import WorldManager from './worldManager.js';
-import UIManager from './ui.js';
-import FiringTableBuilder from './firingTableBuilder.js';
-import PrestigeManager from './prestige.js';
+import { CONFIG, GAME_STATES } from "./config.js";
+import { PerformanceMonitor } from "./utils.js";
+import Cannon from "./cannon.js";
+import Castle from "./castle.js";
+import PhysicsWorld from "./physics.js";
+import ParticleSystem from "./particles.js";
+import UpgradeManager from "./upgrades.js";
+import WorldManager from "./worldManager.js";
+import UIManager from "./ui.js";
+import FiringTableBuilder from "./firingTableBuilder.js";
+import PrestigeManager from "./prestige.js";
 
 class Game {
   constructor() {
@@ -44,8 +44,8 @@ class Game {
 
   init() {
     // Get canvas and context
-    this.canvas = document.getElementById('gameCanvas');
-    this.ctx = this.canvas.getContext('2d');
+    this.canvas = document.getElementById("gameCanvas");
+    this.ctx = this.canvas.getContext("2d");
 
     // Initialize game systems
     this.physics = new PhysicsWorld();
@@ -88,7 +88,8 @@ class Game {
         CONFIG.CASTLE.Y,
         this.physics,
         this.particles,
-        this.prestigeManager
+        this.prestigeManager,
+        this.upgradeManager
       );
 
       // Reset cannon's no-targets timer for initial castle
@@ -122,7 +123,7 @@ class Game {
     // Start game loop
     this.gameLoop();
 
-    console.log('Idle Cannon Game Initialized!');
+    console.log("Idle Cannon Game Initialized!");
   }
 
   applyUpgradesToCannon() {
@@ -200,13 +201,13 @@ class Game {
 
     // Check if cannon signaled to auto-destroy castle
     if (cannonResult && cannonResult.autoDestroyCastle) {
-      console.log('Auto-destroying castle after 5 seconds of no targets');
+      console.log("Auto-destroying castle after 5 seconds of no targets");
       this.castle.isDestroyed = true;
       this.castle.onDestroyed();
     }
 
     // Debug logging for timeout status
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       const timeSinceLastTargets =
         Date.now() - this.cannon.lastTargetsFoundTime;
       const timeSinceLastDamage = Date.now() - this.castle.lastDamageTime;
@@ -296,7 +297,8 @@ class Game {
       CONFIG.CASTLE.Y - 300, // Start 300 pixels above normal position
       this.physics,
       this.particles,
-      this.prestigeManager
+      this.prestigeManager,
+      this.upgradeManager
     );
   }
 
@@ -304,9 +306,9 @@ class Game {
     // Check if we can prestige (completed all worlds)
     if (this.worldManager.canPrestige()) {
       this.ui.showModal(
-        'Congratulations!',
-        'Congratulations, you control the entire Solar System (in this part of the Multi-verse).\n\nProceed to the next parallel universe and gain one level of Prestige, and unlock all of the cannons.\n\nNow, you will earn gems for destroying castles, which you can spend on permanent prestige upgrades. You won 50 gems. Use them well.',
-        'Prestige!',
+        "Congratulations!",
+        "Congratulations, you control the entire Solar System (in this part of the Multi-verse).\n\nProceed to the next parallel universe and gain one level of Prestige, and unlock all of the cannons.\n\nNow, you will earn gems for destroying castles, which you can spend on permanent prestige upgrades. You won 50 gems. Use them well.",
+        "Prestige!",
         () => {
           this.handlePrestige();
         }
@@ -329,9 +331,9 @@ class Game {
 
     // Show progression modal
     this.ui.showModal(
-      'Congratulations!',
+      "Congratulations!",
       `World ${currentWorld.id}: ${currentWorld.name} Complete!`,
-      'Proceed to Next Level',
+      "Proceed to Next Level",
       () => {
         this.progressToNextWorld();
       }
@@ -377,7 +379,7 @@ class Game {
       const newWorld = this.worldManager.getCurrentWorld();
       this.ui.showNotification(
         `Welcome to World ${newWorld.id}: ${newWorld.name}!`,
-        'success'
+        "success"
       );
 
       console.log(
@@ -450,7 +452,7 @@ class Game {
     this.renderCannonPauseIndicator();
 
     // Debug info (optional) - rendered without world offset
-    if (window.location.search.includes('debug')) {
+    if (window.location.search.includes("debug")) {
       this.renderDebugInfo();
     }
   }
@@ -482,7 +484,7 @@ class Game {
     );
 
     // Add some grass texture
-    this.ctx.fillStyle = '#228B22';
+    this.ctx.fillStyle = "#228B22";
     for (let x = 0; x < CONFIG.CANVAS.WIDTH; x += 20) {
       const grassHeight = Math.sin(x * 0.01) * 3 + 2;
       this.ctx.fillRect(
@@ -504,9 +506,9 @@ class Game {
       this.ctx.save();
 
       // Draw pause indicator near cannon
-      this.ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-      this.ctx.font = '16px Arial';
-      this.ctx.textAlign = 'center';
+      this.ctx.fillStyle = "rgba(255, 0, 0, 0.8)";
+      this.ctx.font = "16px Arial";
+      this.ctx.textAlign = "center";
 
       const text = `CANNON RELOADING: ${secondsRemaining}s`;
       this.ctx.fillText(text, CONFIG.CANNON.X, CONFIG.CANNON.Y - 60);
@@ -517,7 +519,7 @@ class Game {
       const progress = Math.max(0, timeRemaining / this.currentPauseDuration);
 
       // Background bar
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
       this.ctx.fillRect(
         CONFIG.CANNON.X - barWidth / 2,
         CONFIG.CANNON.Y - 40,
@@ -526,7 +528,7 @@ class Game {
       );
 
       // Progress bar
-      this.ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+      this.ctx.fillStyle = "rgba(255, 100, 100, 0.9)";
       this.ctx.fillRect(
         CONFIG.CANNON.X - barWidth / 2,
         CONFIG.CANNON.Y - 40,
@@ -539,8 +541,8 @@ class Game {
   }
 
   renderDebugInfo() {
-    this.ctx.fillStyle = 'white';
-    this.ctx.font = '12px Arial';
+    this.ctx.fillStyle = "white";
+    this.ctx.font = "12px Arial";
     this.ctx.fillText(`FPS: ${this.performanceMonitor.getFPS()}`, 10, 20);
     this.ctx.fillText(
       `Cannonballs: ${this.physics.cannonballs.length}`,
@@ -561,7 +563,7 @@ class Game {
 
   // Handle window resize
   handleResize() {
-    const container = document.getElementById('gameContainer');
+    const container = document.getElementById("gameContainer");
     const rect = container.getBoundingClientRect();
 
     // Maintain aspect ratio
@@ -575,8 +577,8 @@ class Game {
       newHeight = newWidth / aspectRatio;
     }
 
-    this.canvas.style.width = newWidth + 'px';
-    this.canvas.style.height = newHeight + 'px';
+    this.canvas.style.width = newWidth + "px";
+    this.canvas.style.height = newHeight + "px";
   }
 
   // Handle upgrade purchase from UI
@@ -588,7 +590,7 @@ class Game {
     // Show feedback
     this.ui.showNotification(
       `${this.upgradeManager.getUpgradeName(upgradeType)} upgraded!`,
-      'success'
+      "success"
     );
   }
 
@@ -604,16 +606,16 @@ class Game {
     // Create new castle
     this.createNewCastle();
 
-    console.log('All progress reset!');
+    console.log("All progress reset!");
   }
 }
 
 // Initialize game when page loads
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener("DOMContentLoaded", () => {
   const game = new Game();
 
   // Handle window resize
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     game.handleResize();
   });
 
@@ -625,7 +627,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // Handle visibility change to pause/resume
-document.addEventListener('visibilitychange', () => {
+document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     // Page is hidden, could implement pause logic here
   } else {

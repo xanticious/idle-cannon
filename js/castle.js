@@ -1,9 +1,9 @@
 // Castle generation and management
-import { CONFIG, MATERIALS } from './config.js';
-import { randomInt, randomFloat, randomChoice } from './utils.js';
+import { CONFIG, MATERIALS } from "./config.js";
+import { randomInt, randomFloat, randomChoice } from "./utils.js";
 
 class Block {
-  constructor(x, y, material, physicsBody, shape = 'square') {
+  constructor(x, y, material, physicsBody, shape = "square") {
     this.x = x;
     this.y = y;
     this.material = material;
@@ -56,7 +56,7 @@ class Block {
     // Render protection shield effect
     if (this.isProtected) {
       ctx.save();
-      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalCompositeOperation = "overlay";
 
       // Create a subtle blue tint for protected blocks
       const protectionAlpha = 0.3 * (Math.sin(Date.now() * 0.003) * 0.3 + 0.7); // Pulsing effect
@@ -80,7 +80,7 @@ class Block {
 
     if (this.damageFlash > 0) {
       ctx.save();
-      ctx.globalCompositeOperation = 'screen';
+      ctx.globalCompositeOperation = "screen";
       ctx.fillStyle = `rgba(255, 255, 255, ${this.damageFlash * 0.5})`;
 
       const pos = this.body.position;
@@ -114,7 +114,7 @@ class Block {
     const flagY = pos.y - blockSize / 2; // Top of the block
 
     // Flag pole (black line)
-    ctx.strokeStyle = '#333333';
+    ctx.strokeStyle = "#333333";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(flagX, flagY);
@@ -122,7 +122,7 @@ class Block {
     ctx.stroke();
 
     // Flag (red triangle)
-    ctx.fillStyle = '#FF0000';
+    ctx.fillStyle = "#FF0000";
     ctx.beginPath();
     ctx.moveTo(flagX, flagY - 25); // Top of pole
     ctx.lineTo(flagX + 15, flagY - 20); // Right point of flag
@@ -131,19 +131,27 @@ class Block {
     ctx.fill();
 
     // Flag outline
-    ctx.strokeStyle = '#CC0000';
+    ctx.strokeStyle = "#CC0000";
     ctx.lineWidth = 1;
     ctx.stroke();
   }
 }
 
 class Castle {
-  constructor(x, y, physicsWorld, particleSystem, prestigeManager = null) {
+  constructor(
+    x,
+    y,
+    physicsWorld,
+    particleSystem,
+    prestigeManager = null,
+    upgradeManager = null
+  ) {
     this.x = x;
     this.y = y;
     this.physics = physicsWorld;
     this.particles = particleSystem;
     this.prestigeManager = prestigeManager;
+    this.upgradeManager = upgradeManager;
     this.blocks = [];
     this.isDestroyed = false;
     this.destructionTime = 0;
@@ -162,9 +170,9 @@ class Castle {
     this.protectionTime = 5000; // 5 seconds of protection in milliseconds
 
     console.log(
-      'Castle initialized with no-damage timeout:',
+      "Castle initialized with no-damage timeout:",
       this.noDamageTimeout / 1000,
-      'seconds and 5 second protection period'
+      "seconds and 5 second protection period"
     );
 
     this.generate();
@@ -259,7 +267,7 @@ class Castle {
         x: x,
         y: 0,
         material: MATERIALS.STONE,
-        shape: 'square',
+        shape: "square",
       });
       occupiedGrid[0][x] = true;
     }
@@ -315,11 +323,11 @@ class Castle {
     const pieces = [];
 
     // 1x1 Square (always available if we have support)
-    pieces.push({ type: 'square1x1', width: 1, height: 1, shape: 'square' });
+    pieces.push({ type: "square1x1", width: 1, height: 1, shape: "square" });
 
     // 1x1 Circle (only if not at leftmost or rightmost column)
     if (x > 0 && x < width - 1) {
-      pieces.push({ type: 'circle1x1', width: 1, height: 1, shape: 'circle' });
+      pieces.push({ type: "circle1x1", width: 1, height: 1, shape: "circle" });
     }
 
     return pieces;
@@ -452,7 +460,7 @@ class Castle {
     const timeSinceLastDamage = Date.now() - this.lastDamageTime;
     const shouldDestroy = timeSinceLastDamage >= this.noDamageTimeout;
 
-    if (shouldDestroy && window.location.search.includes('debug')) {
+    if (shouldDestroy && window.location.search.includes("debug")) {
       console.log(
         `Castle should auto-destroy: ${(timeSinceLastDamage / 1000).toFixed(
           1
@@ -469,13 +477,13 @@ class Castle {
       this.protectionTime -= deltaTime;
       if (this.protectionTime <= 0) {
         this.isProtected = false;
-        console.log('Castle protection expired');
+        console.log("Castle protection expired");
       }
     }
 
     // Check for auto-destruction due to no damage timeout
     if (!this.isDestroyed && this.shouldAutoDestroy()) {
-      console.log('Castle auto-destroyed after 20 seconds of no damage');
+      console.log("Castle auto-destroyed after 20 seconds of no damage");
       this.isDestroyed = true;
       this.onDestroyed();
       return;
@@ -532,13 +540,21 @@ class Castle {
         const minDamageVelocity = 5;
 
         if (speed >= minDamageVelocity) {
-          // Cannonball hit disables protection (intentional player damage)
+          // Don't take damage if block is protected
           if (hitBlock.isProtected) {
-            hitBlock.isProtected = false;
+            continue; // Skip this collision, no damage
           }
 
-          // Calculate damage based on velocity
+          // Cannonball hit disables protection (intentional player damage)
+          // This is already handled above, but keeping for clarity
+
+          // Calculate damage based on velocity and size
           let damage = this.calculateDamage(speed);
+
+          // Skip if no damage calculated (shouldn't happen due to minDamageVelocity check above)
+          if (damage <= 0) {
+            continue;
+          }
 
           // Check if this is a fireball
           const isFireball = cannonballData && cannonballData.isFireball;
@@ -641,23 +657,35 @@ class Castle {
   }
 
   calculateDamage(speed) {
-    // Scale: 0-1 damage for speeds 5-15, 1-5 damage for speeds 15-50+
-    let damage = 0;
     const minDamageVelocity = 5;
 
-    if (speed < 15) {
-      // Low speed: 0-1 damage
-      damage = Math.floor((speed - minDamageVelocity) / 10);
-    } else if (speed < 30) {
-      // Medium speed: 1-3 damage
-      damage = 1 + Math.floor((speed - 15) / 7.5);
-    } else {
-      // High speed: 3-5 damage
-      damage = Math.min(5, 3 + Math.floor((speed - 30) / 10));
+    // 0 damage if velocity is below threshold
+    if (speed < minDamageVelocity) {
+      return 0;
     }
 
-    // Ensure at least 1 damage for valid collisions
-    return Math.max(1, damage);
+    let speedDamage = 0;
+
+    // Calculate speed-based damage using the new formula
+    if (speed <= 30) {
+      // Linear formula for speeds between 5 and 30
+      speedDamage = speed / 6;
+    } else {
+      // Cap at 5 for speeds above 30
+      speedDamage = 5;
+    }
+
+    // Add size-based damage from cannonball size upgrade
+    let sizeDamage = 0;
+    if (this.upgradeManager) {
+      const sizeLevel = this.upgradeManager.getUpgradeLevel("size");
+      sizeDamage = sizeLevel / 5;
+    }
+
+    const totalDamage = speedDamage + sizeDamage;
+
+    // Ensure at least 1 damage for valid collisions (when speed >= minDamageVelocity)
+    return Math.max(1, Math.floor(totalDamage));
   }
 
   handleGroundCollisions() {
