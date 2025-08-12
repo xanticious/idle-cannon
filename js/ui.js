@@ -60,6 +60,119 @@ class UIManager {
       fullscreenEnterIcon: document.getElementById("fullscreenEnterIcon"),
       fullscreenExitIcon: document.getElementById("fullscreenExitIcon"),
     };
+
+    // Add mobile-specific initialization
+    this.initializeMobileFeatures();
+  }
+
+  initializeMobileFeatures() {
+    // Detect if the device is mobile
+    this.isMobile = window.innerWidth <= 768 || "ontouchstart" in window;
+
+    // Add viewport meta tag optimization for mobile if not present
+    if (this.isMobile && !document.querySelector('meta[name="viewport"]')) {
+      const viewport = document.createElement("meta");
+      viewport.name = "viewport";
+      viewport.content =
+        "width=device-width, initial-scale=1.0, user-scalable=no";
+      document.head.appendChild(viewport);
+    }
+
+    // Add mobile-specific event listeners
+    if (this.isMobile) {
+      this.setupMobileEventListeners();
+    }
+
+    // Handle orientation changes
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        this.handleOrientationChange();
+      }, 100);
+    });
+
+    // Handle window resize for responsive behavior
+    window.addEventListener("resize", () => {
+      this.handleResize();
+    });
+  }
+
+  setupMobileEventListeners() {
+    // Prevent accidental zoom on double-tap for game elements
+    const gameElements = [
+      this.elements.hud,
+      this.elements.hudToggle,
+      this.elements.showHudButton,
+      document.getElementById("gameCanvas"),
+    ];
+
+    gameElements.forEach((element) => {
+      if (element) {
+        element.addEventListener(
+          "touchstart",
+          (e) => {
+            // Prevent default touch behavior that might interfere with game
+            if (e.touches.length > 1) {
+              e.preventDefault();
+            }
+          },
+          { passive: false }
+        );
+      }
+    });
+
+    // Add swipe gesture to close HUD on mobile
+    let startY = 0;
+    let startX = 0;
+
+    this.elements.hud.addEventListener("touchstart", (e) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+    });
+
+    this.elements.hud.addEventListener("touchmove", (e) => {
+      if (!this.isHidden) {
+        const currentY = e.touches[0].clientY;
+        const currentX = e.touches[0].clientX;
+        const diffY = startY - currentY;
+        const diffX = Math.abs(startX - currentX);
+
+        // If swiping up and not too much horizontal movement
+        if (diffY > 50 && diffX < 100) {
+          this.toggleHUD();
+        }
+      }
+    });
+  }
+
+  handleOrientationChange() {
+    // Update mobile state
+    this.isMobile = window.innerWidth <= 768 || "ontouchstart" in window;
+
+    // Refresh UI layout
+    this.updateHUDVisibility();
+
+    // Update tab content to ensure proper layout
+    if (this.currentTab) {
+      setTimeout(() => {
+        this.updateTabContent();
+      }, 200);
+    }
+  }
+
+  handleResize() {
+    // Update mobile detection
+    const wasMobile = this.isMobile;
+    this.isMobile = window.innerWidth <= 768 || "ontouchstart" in window;
+
+    // If mobile state changed, reinitialize mobile features
+    if (wasMobile !== this.isMobile) {
+      if (this.isMobile) {
+        this.setupMobileEventListeners();
+      }
+    }
+
+    // Update UI layout
+    this.updateHUDVisibility();
   }
 
   setupEventListeners() {
@@ -122,13 +235,13 @@ class UIManager {
         { id: "upgrades", label: "Upgrades", visible: true },
         {
           id: "prestige",
-          label: "Prestige Upgrades",
+          label: this.isMobile ? "Prestige" : "Prestige Upgrades",
           visible: () =>
             this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
         },
         {
           id: "cannons",
-          label: "Cannons",
+          label: this.isMobile ? "Skins" : "Cannons",
           visible: () =>
             this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
         },
@@ -141,7 +254,29 @@ class UIManager {
           this.currentTab === tab.id ? "active" : ""
         }`;
         tabButton.textContent = tab.label;
+
+        // Add mobile-specific attributes
+        if (this.isMobile) {
+          tabButton.style.touchAction = "manipulation";
+          tabButton.setAttribute("aria-label", `Switch to ${tab.label} tab`);
+        }
+
         tabButton.addEventListener("click", () => this.switchTab(tab.id));
+
+        // Add touch feedback for mobile
+        if (this.isMobile) {
+          tabButton.addEventListener("touchstart", () => {
+            tabButton.style.backgroundColor = "#888";
+          });
+
+          tabButton.addEventListener("touchend", () => {
+            setTimeout(() => {
+              if (!tabButton.classList.contains("active")) {
+                tabButton.style.backgroundColor = "";
+              }
+            }, 150);
+          });
+        }
 
         // Set initial visibility
         const isVisible =
@@ -207,6 +342,11 @@ class UIManager {
     card.className = "upgrade-card prestige-upgrade-card";
     card.dataset.upgradeType = upgradeInfo.type;
 
+    // Add mobile-specific attributes
+    if (this.isMobile) {
+      card.style.touchAction = "manipulation";
+    }
+
     card.innerHTML = `
       <div class="upgrade-name">${upgradeInfo.name}</div>
       <div class="upgrade-level">Level: <span class="level-value">${
@@ -228,6 +368,11 @@ class UIManager {
     button.addEventListener("click", () => {
       this.handlePrestigeUpgrade(upgradeInfo.type);
     });
+
+    // Add mobile-specific touch feedback
+    if (this.isMobile) {
+      this.addMobileTouchFeedback(button);
+    }
 
     return card;
   }
@@ -253,6 +398,11 @@ class UIManager {
     card.className = `cannon-card ${isSelected ? "selected" : ""}`;
     card.dataset.cannonId = cannon.id;
 
+    // Add mobile-specific attributes
+    if (this.isMobile) {
+      card.style.touchAction = "manipulation";
+    }
+
     card.innerHTML = `
       <div class="cannon-name">${cannon.name}</div>
       <div class="cannon-description">${cannon.description}</div>
@@ -267,6 +417,31 @@ class UIManager {
     button.addEventListener("click", () => {
       this.handleCannonSelect(cannon.id);
     });
+
+    // Add mobile-specific touch feedback
+    if (this.isMobile) {
+      this.addMobileTouchFeedback(button);
+
+      // Add touch feedback for the entire card
+      card.addEventListener("touchstart", () => {
+        if (!isSelected) {
+          card.style.transform = "scale(0.98)";
+          card.style.boxShadow = "inset 0 2px 8px rgba(0,0,0,0.2)";
+        }
+      });
+
+      card.addEventListener("touchend", () => {
+        setTimeout(() => {
+          card.style.transform = "";
+          card.style.boxShadow = "";
+        }, 150);
+      });
+
+      card.addEventListener("touchcancel", () => {
+        card.style.transform = "";
+        card.style.boxShadow = "";
+      });
+    }
 
     return card;
   }
@@ -307,6 +482,11 @@ class UIManager {
     card.className = "upgrade-card";
     card.dataset.upgradeType = upgradeType;
 
+    // Add mobile-specific attributes
+    if (this.isMobile) {
+      card.style.touchAction = "manipulation";
+    }
+
     card.innerHTML = `
             <div class="upgrade-name">${upgradeInfo.name}</div>
             <div class="upgrade-level">Level: <span class="level-value">${
@@ -331,7 +511,35 @@ class UIManager {
       this.handleUpgrade(upgradeType);
     });
 
+    // Add mobile-specific touch feedback
+    if (this.isMobile) {
+      this.addMobileTouchFeedback(button);
+    }
+
     return card;
+  }
+
+  addMobileTouchFeedback(button) {
+    button.style.touchAction = "manipulation";
+
+    button.addEventListener("touchstart", () => {
+      if (!button.disabled) {
+        button.style.transform = "scale(0.95)";
+        button.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.3)";
+      }
+    });
+
+    button.addEventListener("touchend", () => {
+      setTimeout(() => {
+        button.style.transform = "";
+        button.style.boxShadow = "";
+      }, 150);
+    });
+
+    button.addEventListener("touchcancel", () => {
+      button.style.transform = "";
+      button.style.boxShadow = "";
+    });
   }
 
   handleUpgrade(upgradeType) {
@@ -594,10 +802,15 @@ class UIManager {
     const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
+
+    // Mobile-responsive positioning
+    const isMobile = window.innerWidth <= 768;
+
     notification.style.cssText = `
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: ${isMobile ? "10px" : "20px"};
+            right: ${isMobile ? "10px" : "20px"};
+            left: ${isMobile ? "10px" : "auto"};
             background: ${
               type === "success"
                 ? "#4CAF50"
@@ -606,13 +819,18 @@ class UIManager {
                 : "#2196F3"
             };
             color: white;
-            padding: 12px 20px;
+            padding: ${isMobile ? "10px 15px" : "12px 20px"};
             border-radius: 5px;
             font-weight: bold;
+            font-size: ${isMobile ? "14px" : "16px"};
             z-index: 1001;
             opacity: 0;
-            transform: translateX(100%);
+            transform: translateY(-20px);
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: ${isMobile ? "calc(100% - 20px)" : "400px"};
+            text-align: ${isMobile ? "center" : "left"};
+            word-wrap: break-word;
         `;
 
     document.body.appendChild(notification);
@@ -620,20 +838,23 @@ class UIManager {
     // Animate in
     setTimeout(() => {
       notification.style.opacity = "1";
-      notification.style.transform = "translateX(0)";
+      notification.style.transform = "translateY(0)";
     }, 10);
 
     // Animate out and remove
-    setTimeout(() => {
-      notification.style.opacity = "0";
-      notification.style.transform = "translateX(100%)";
+    setTimeout(
+      () => {
+        notification.style.opacity = "0";
+        notification.style.transform = "translateY(-20px)";
 
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
-    }, 3000);
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      },
+      isMobile ? 2500 : 3000
+    ); // Shorter display time on mobile
   }
 
   // Get canvas coordinates for money earned display
@@ -709,20 +930,28 @@ class UIManager {
       justify-content: center;
       z-index: 2000;
       font-family: Arial, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
     `;
 
     // Create modal content
     const modal = document.createElement("div");
     modal.className = "game-modal";
+
+    // Check if it's a mobile device
+    const isMobile = window.innerWidth <= 768;
+
     modal.style.cssText = `
       background: linear-gradient(135deg, #2c3e50, #34495e);
       border: 3px solid #f39c12;
       border-radius: 15px;
-      padding: 40px;
+      padding: ${isMobile ? "20px" : "40px"};
       text-align: center;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      max-width: 500px;
-      width: 90%;
+      max-width: ${isMobile ? "90%" : "500px"};
+      width: ${isMobile ? "100%" : "90%"};
+      max-height: 90vh;
+      overflow-y: auto;
       animation: modalSlideIn 0.3s ease-out;
     `;
 
@@ -739,6 +968,13 @@ class UIManager {
           opacity: 1;
         }
       }
+      
+      @media (max-width: 768px) {
+        .game-modal {
+          border-radius: 10px !important;
+          border-width: 2px !important;
+        }
+      }
     `;
     document.head.appendChild(style);
 
@@ -747,8 +983,8 @@ class UIManager {
     titleElement.textContent = title;
     titleElement.style.cssText = `
       color: #f39c12;
-      font-size: 2.5em;
-      margin: 0 0 20px 0;
+      font-size: ${isMobile ? "1.8em" : "2.5em"};
+      margin: 0 0 ${isMobile ? "15px" : "20px"} 0;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     `;
 
@@ -759,8 +995,8 @@ class UIManager {
       subtitleElement.textContent = subtitle;
       subtitleElement.style.cssText = `
         color: #ecf0f1;
-        font-size: 1.2em;
-        margin: 0 0 30px 0;
+        font-size: ${isMobile ? "1em" : "1.2em"};
+        margin: 0 0 ${isMobile ? "20px" : "30px"} 0;
         line-height: 1.4;
       `;
     }
@@ -772,8 +1008,8 @@ class UIManager {
       background: linear-gradient(135deg, #e74c3c, #c0392b);
       color: white;
       border: none;
-      padding: 15px 30px;
-      font-size: 1.2em;
+      padding: ${isMobile ? "12px 25px" : "15px 30px"};
+      font-size: ${isMobile ? "1em" : "1.2em"};
       font-weight: bold;
       border-radius: 8px;
       cursor: pointer;
@@ -781,18 +1017,25 @@ class UIManager {
       transition: all 0.3s ease;
       text-transform: uppercase;
       letter-spacing: 1px;
+      min-height: ${isMobile ? "44px" : "auto"};
+      touch-action: manipulation;
     `;
 
-    // Button hover effects
-    button.addEventListener("mouseenter", () => {
+    // Button hover/touch effects
+    const addActiveEffect = () => {
       button.style.transform = "translateY(-2px)";
       button.style.boxShadow = "0 6px 20px rgba(231, 76, 60, 0.6)";
-    });
+    };
 
-    button.addEventListener("mouseleave", () => {
+    const removeActiveEffect = () => {
       button.style.transform = "translateY(0)";
       button.style.boxShadow = "0 4px 15px rgba(231, 76, 60, 0.4)";
-    });
+    };
+
+    button.addEventListener("mouseenter", addActiveEffect);
+    button.addEventListener("mouseleave", removeActiveEffect);
+    button.addEventListener("touchstart", addActiveEffect);
+    button.addEventListener("touchend", removeActiveEffect);
 
     // Button click handler
     button.addEventListener("click", () => {

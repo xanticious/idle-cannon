@@ -287,11 +287,11 @@
 
       .show-hud-button {
         position: absolute;
-        top: 65px;
-        left: 85px;
+        top: 80px;
+        left: 110px;
         background: rgba(0, 0, 0, 0.8);
         color: rgb(220, 220, 220);
-        border: none;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 7px 9px;
         border-radius: 8px;
         cursor: pointer;
@@ -311,8 +311,8 @@
 
       .world-display {
         position: absolute;
-        top: 20px;
-        left: 50px;
+        top: 30px;
+        left: 90px;
         background: rgba(0, 0, 0, 0.8);
         color: white;
         padding: 10px 15px;
@@ -357,6 +357,275 @@
         width: 20px;
         height: 20px;
         fill: currentColor;
+      }
+
+      /* Mobile Responsive Styles */
+      @media (max-width: 768px) {
+        #hud {
+          position: fixed;
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          transform: none;
+          max-width: none;
+          width: calc(100% - 20px);
+          max-height: calc(100vh - 20px);
+          overflow-y: auto;
+          padding: 10px;
+          font-size: 12px;
+        }
+
+        #hud.hidden {
+          transform: translateY(-100%);
+        }
+
+        .hud-header {
+          flex-direction: column;
+          gap: 5px;
+          margin-bottom: 8px;
+        }
+
+        .money-display,
+        .gems-display {
+          font-size: 18px;
+        }
+
+        .stats-section {
+          flex-direction: column;
+          gap: 5px;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+        }
+
+        .stat-item {
+          font-size: 11px;
+          margin-bottom: 2px;
+        }
+
+        .tab-container {
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+          gap: 4px;
+        }
+
+        .tab-button {
+          padding: 6px 12px;
+          font-size: 11px;
+          flex: 1;
+          min-width: 80px;
+        }
+
+        .upgrades-container {
+          grid-template-columns: 1fr;
+          gap: 8px;
+          margin-bottom: 10px;
+        }
+
+        .upgrade-card,
+        .prestige-upgrade-card,
+        .cannon-card {
+          padding: 8px;
+          margin: 0;
+        }
+
+        .upgrade-name,
+        .cannon-name {
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+
+        .upgrade-level,
+        .upgrade-cost,
+        .cannon-description {
+          font-size: 10px;
+          margin-bottom: 4px;
+        }
+
+        .upgrade-effect {
+          font-size: 10px;
+          margin-bottom: 6px;
+        }
+
+        .upgrade-button,
+        .cannon-button {
+          padding: 8px;
+          font-size: 11px;
+          min-height: 36px;
+        }
+
+        .show-hud-button {
+          top: 50px;
+          left: 40px;
+          padding: 8px 12px;
+          font-size: 12px;
+        }
+
+        .world-display {
+          top: 10px;
+          left: 10px;
+          right: 10px;
+          width: calc(100% - 20px);
+          padding: 8px 12px;
+          font-size: 14px;
+          text-align: center;
+        }
+
+        .fullscreen-button {
+          bottom: 10px;
+          right: 10px;
+          width: 36px;
+          height: 36px;
+          padding: 6px;
+        }
+      }
+
+      /* Extra small screens (phones in portrait) */
+      @media (max-width: 480px) {
+        #hud {
+          top: 5px;
+          left: 5px;
+          right: 5px;
+          width: calc(100% - 10px);
+          padding: 8px;
+          font-size: 11px;
+        }
+
+        .money-display,
+        .gems-display {
+          font-size: 16px;
+        }
+
+        .tab-container {
+          margin-bottom: 8px;
+          gap: 2px;
+        }
+
+        .tab-button {
+          padding: 5px 8px;
+          font-size: 10px;
+          min-width: 70px;
+        }
+
+        .upgrade-card,
+        .prestige-upgrade-card,
+        .cannon-card {
+          padding: 6px;
+        }
+
+        .upgrade-name,
+        .cannon-name {
+          font-size: 13px;
+        }
+
+        .upgrade-level,
+        .upgrade-cost,
+        .upgrade-effect,
+        .cannon-description {
+          font-size: 9px;
+        }
+
+        .upgrade-button,
+        .cannon-button {
+          padding: 6px;
+          font-size: 10px;
+          min-height: 32px;
+        }
+
+        .stat-item {
+          font-size: 10px;
+        }
+
+        .show-hud-button {
+          padding: 6px 10px;
+          font-size: 11px;
+        }
+
+        .world-display {
+          padding: 6px 10px;
+          font-size: 12px;
+        }
+
+        .fullscreen-button {
+          width: 32px;
+          height: 32px;
+          bottom: 5px;
+          right: 5px;
+        }
+
+        .fullscreen-button svg {
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      /* Landscape orientation on mobile */
+      @media (max-width: 768px) and (orientation: landscape) {
+        #hud {
+          max-height: calc(100vh - 10px);
+          font-size: 10px;
+        }
+
+        .hud-content {
+          max-height: calc(100vh - 100px);
+          overflow-y: auto;
+        }
+
+        .upgrades-container {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 6px;
+        }
+
+        .tab-button {
+          font-size: 10px;
+          padding: 4px 8px;
+        }
+
+        .upgrade-card,
+        .prestige-upgrade-card,
+        .cannon-card {
+          padding: 6px;
+        }
+
+        .upgrade-name,
+        .cannon-name {
+          font-size: 12px;
+        }
+
+        .upgrade-level,
+        .upgrade-cost,
+        .upgrade-effect,
+        .cannon-description {
+          font-size: 9px;
+          margin-bottom: 3px;
+        }
+
+        .upgrade-button,
+        .cannon-button {
+          padding: 4px;
+          font-size: 9px;
+          min-height: 28px;
+        }
+      }
+
+      /* Touch-friendly styles */
+      @media (pointer: coarse) {
+        .tab-button,
+        .upgrade-button,
+        .cannon-button,
+        .hide-button,
+        .reset-button,
+        .show-hud-button,
+        .fullscreen-button {
+          cursor: pointer;
+          -webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+          touch-action: manipulation;
+        }
+
+        .upgrade-card,
+        .prestige-upgrade-card,
+        .cannon-card {
+          touch-action: manipulation;
+        }
       }
     </style>
   </head>
