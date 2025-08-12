@@ -1,6 +1,6 @@
 // Prestige system management
-import { CONFIG } from './config.js';
-import { formatNumber } from './utils.js';
+import { CONFIG } from "./config.js";
+import { formatNumber } from "./utils.js";
 
 class PrestigeManager {
   constructor() {
@@ -14,7 +14,7 @@ class PrestigeManager {
       fasterReload: 0,
       blastShot: 0,
       fireballs: 0,
-      biggerCastles: 0,
+      betterCastles: 0,
       passiveIncome: 0,
     };
 
@@ -29,7 +29,7 @@ class PrestigeManager {
     const urlParams = new URLSearchParams(window.location.search);
 
     // Check for prestige parameter
-    const prestigeParam = urlParams.get('prestige');
+    const prestigeParam = urlParams.get("prestige");
     if (prestigeParam) {
       const prestigeLevel = parseInt(prestigeParam, 10);
       if (!isNaN(prestigeLevel) && prestigeLevel >= 0) {
@@ -39,7 +39,7 @@ class PrestigeManager {
     }
 
     // Check for gems parameter
-    const gemsParam = urlParams.get('gems');
+    const gemsParam = urlParams.get("gems");
     if (gemsParam) {
       const startingGems = parseInt(gemsParam, 10);
       if (!isNaN(startingGems) && startingGems >= 0) {
@@ -159,7 +159,7 @@ class PrestigeManager {
       levelCap: levelCap,
       isMaxed: isMaxed,
       cost: cost,
-      costFormatted: isMaxed ? 'MAXED' : formatNumber(cost),
+      costFormatted: isMaxed ? "MAXED" : formatNumber(cost),
       canAfford: canAfford,
     };
   }
@@ -179,7 +179,7 @@ class PrestigeManager {
       fasterReload: 0,
       blastShot: 0,
       fireballs: 0,
-      biggerCastles: 0,
+      betterCastles: 0,
       passiveIncome: 0,
     };
   }
@@ -191,9 +191,9 @@ class PrestigeManager {
     this.resetPrestigeUpgrades();
 
     try {
-      localStorage.removeItem('idleCannon_prestige');
+      localStorage.removeItem("idleCannon_prestige");
     } catch (e) {
-      console.warn('Failed to clear prestige save data:', e);
+      console.warn("Failed to clear prestige save data:", e);
     }
   }
 
@@ -207,32 +207,31 @@ class PrestigeManager {
     };
 
     try {
-      localStorage.setItem('idleCannon_prestige', JSON.stringify(saveData));
+      localStorage.setItem("idleCannon_prestige", JSON.stringify(saveData));
     } catch (e) {
-      console.warn('Failed to save prestige progress:', e);
+      console.warn("Failed to save prestige progress:", e);
     }
   }
 
   loadProgress() {
     try {
-      const saveData = localStorage.getItem('idleCannon_prestige');
+      const saveData = localStorage.getItem("idleCannon_prestige");
       if (saveData) {
         const data = JSON.parse(saveData);
         this.prestigeLevel = data.prestigeLevel || 0;
         this.gems = data.gems || 0;
         this.selectedCannonId = data.selectedCannonId || 0;
         this.prestigeUpgrades = {
-          doubleShot: 0,
-          fasterReload: 0,
-          blastShot: 0,
-          fireballs: 0,
-          biggerCastles: 0,
-          passiveIncome: 0,
-          ...data.prestigeUpgrades,
+          doubleShot: data.prestigeUpgrades.doubleShot || 0,
+          fasterReload: data.prestigeUpgrades.fasterReload || 0,
+          blastShot: data.prestigeUpgrades.blastShot || 0,
+          fireballs: data.prestigeUpgrades.fireballs || 0,
+          betterCastles: data.prestigeUpgrades.betterCastles || 0,
+          passiveIncome: data.prestigeUpgrades.passiveIncome || 0,
         };
       }
     } catch (e) {
-      console.warn('Failed to load prestige progress:', e);
+      console.warn("Failed to load prestige progress:", e);
     }
   }
 

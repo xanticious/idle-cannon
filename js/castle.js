@@ -1,6 +1,11 @@
 // Castle generation and management
 import { CONFIG, MATERIALS } from "./config.js";
-import { randomInt, randomFloat, randomChoice } from "./utils.js";
+import {
+  randomInt,
+  randomFloat,
+  randomChoice,
+  sampleGaussian,
+} from "./utils.js";
 
 class Block {
   constructor(x, y, material, physicsBody, shape = "square") {
@@ -182,26 +187,85 @@ class Castle {
     // Clear any existing blocks
     this.clearBlocks();
 
-    // Calculate bigger castles bonus
-    let sizeMultiplier = 1.0;
-    if (this.prestigeManager) {
-      const biggerCastlesLevel =
-        this.prestigeManager.prestigeUpgrades.biggerCastles;
-      sizeMultiplier = 1.0 + biggerCastlesLevel * 0.1; // 10% increase per level
+    // Get base castle dimensions
+    let minWidth = CONFIG.CASTLE.MIN_WIDTH;
+    let maxWidth = CONFIG.CASTLE.MAX_WIDTH;
+    let minHeight = CONFIG.CASTLE.MIN_HEIGHT;
+    let maxHeight = CONFIG.CASTLE.MAX_HEIGHT;
+
+    let width, height;
+
+    if (this.prestigeManager && this.upgradeManager) {
+      // Get Better Castles level (1-10)
+      const betterCastlesLevel =
+        this.prestigeManager.prestigeUpgrades.betterCastles;
+
+      if (betterCastlesLevel > 0) {
+        minWidth -= 4;
+        minHeight -= 4;
+        maxWidth += 4;
+        maxHeight += 4;
+        
+        // Get current streak multiplier
+        const currentStreak = this.upgradeManager.getMoneyStreakMultiplier();
+        const maxStreak = CONFIG.MONEY.MAX_STREAK_MULTIPLIER;
+
+        // Calculate how far along the streak we are (0 to 1)
+        const streakProgress = (currentStreak - 1) / (maxStreak - 1);
+
+        // Calculate the center point for Gaussian sampling
+        // Low streak = bias towards smaller castles, high streak = bias towards larger
+        const widthRange = maxWidth - minWidth;
+        const heightRange = maxHeight - minHeight;
+
+        const widthCenter = minWidth + widthRange * streakProgress;
+        const heightCenter = minHeight + heightRange * streakProgress;
+
+        // Calculate sigma (spread) based on Better Castles level
+        // Higher level = more precise targeting (smaller spread)
+        // Level 1: wide spread, Level 10: very narrow spread
+        const baseSigma = Math.max(widthRange, heightRange) * 0.5; // Start with wide spread
+        const precisionFactor = 1 - (betterCastlesLevel - 1) / 9; // Goes from 1.0 to ~0.1
+        const widthSigma = widthRange * 0.3 * precisionFactor;
+        const heightSigma = heightRange * 0.3 * precisionFactor;
+
+        // Sample from Gaussian distribution
+        width = sampleGaussian(minWidth, maxWidth, widthSigma, widthCenter);
+        height = sampleGaussian(
+          minHeight,
+          maxHeight,
+          heightSigma,
+          heightCenter
+        );
+
+        // Debug output for Better Castles if debug parameter is present
+        if (window.location.search.includes("debug")) {
+          console.log(
+            `Better Castles Level: ${betterCastlesLevel}, Streak: ${currentStreak}/${maxStreak}, Progress: ${streakProgress.toFixed(
+              2
+            )}`
+          );
+          console.log(
+            `Width: ${width} (center: ${widthCenter.toFixed(
+              1
+            )}, sigma: ${widthSigma.toFixed(1)})`
+          );
+          console.log(
+            `Height: ${height} (center: ${heightCenter.toFixed(
+              1
+            )}, sigma: ${heightSigma.toFixed(1)})`
+          );
+        }
+      } else {
+        // No Better Castles upgrade - use uniform random
+        width = randomInt(minWidth, maxWidth);
+        height = randomInt(minHeight, maxHeight);
+      }
+    } else {
+      // No prestige manager or upgrade manager - use uniform random
+      width = randomInt(minWidth, maxWidth);
+      height = randomInt(minHeight, maxHeight);
     }
-
-    // Random castle dimensions with size multiplier
-    const baseWidth = randomInt(
-      CONFIG.CASTLE.MIN_WIDTH,
-      CONFIG.CASTLE.MAX_WIDTH
-    );
-    const baseHeight = randomInt(
-      CONFIG.CASTLE.MIN_HEIGHT,
-      CONFIG.CASTLE.MAX_HEIGHT
-    );
-
-    const width = Math.floor(baseWidth * sizeMultiplier);
-    const height = Math.floor(baseHeight * sizeMultiplier);
 
     // Generate castle structure
     const structure = this.generateStructure(width, height);

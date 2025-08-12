@@ -1,6 +1,6 @@
 // Upgrade system and economy management
-import { CONFIG } from './config.js';
-import { formatNumber } from './utils.js';
+import { CONFIG } from "./config.js";
+import { formatNumber } from "./utils.js";
 
 class UpgradeManager {
   constructor(prestigeManager = null) {
@@ -39,7 +39,7 @@ class UpgradeManager {
     const urlParams = new URLSearchParams(window.location.search);
 
     // Check for money parameter
-    const moneyParam = urlParams.get('money');
+    const moneyParam = urlParams.get("money");
     if (moneyParam) {
       const startingMoney = parseInt(moneyParam, 10);
       if (!isNaN(startingMoney) && startingMoney > 0) {
@@ -52,13 +52,13 @@ class UpgradeManager {
     }
 
     // Log other god mode parameters for reference
-    const prestigeParam = urlParams.get('prestige');
-    const gemsParam = urlParams.get('gems');
-    const worldParam = urlParams.get('world');
-    const debugParam = urlParams.get('debug');
+    const prestigeParam = urlParams.get("prestige");
+    const gemsParam = urlParams.get("gems");
+    const worldParam = urlParams.get("world");
+    const debugParam = urlParams.get("debug");
 
     if (prestigeParam || gemsParam || worldParam || debugParam) {
-      console.log('God mode parameters detected:');
+      console.log("God mode parameters detected:");
       if (worldParam) console.log(`  world=${worldParam}`);
       if (prestigeParam) console.log(`  prestige=${prestigeParam}`);
       if (gemsParam) console.log(`  gems=${gemsParam}`);
@@ -238,16 +238,16 @@ class UpgradeManager {
     };
 
     try {
-      localStorage.setItem('idleCannon_save', JSON.stringify(saveData));
+      localStorage.setItem("idleCannon_save", JSON.stringify(saveData));
     } catch (e) {
-      console.warn('Failed to save progress:', e);
+      console.warn("Failed to save progress:", e);
     }
   }
 
   // Load progress from localStorage
   loadProgress() {
     try {
-      const saveData = localStorage.getItem('idleCannon_save');
+      const saveData = localStorage.getItem("idleCannon_save");
       if (saveData) {
         const data = JSON.parse(saveData);
 
@@ -279,7 +279,7 @@ class UpgradeManager {
         }
       }
     } catch (e) {
-      console.warn('Failed to load progress:', e);
+      console.warn("Failed to load progress:", e);
     }
   }
 
@@ -308,9 +308,9 @@ class UpgradeManager {
     };
 
     try {
-      localStorage.removeItem('idleCannon_save');
+      localStorage.removeItem("idleCannon_save");
     } catch (e) {
-      console.warn('Failed to clear save data:', e);
+      console.warn("Failed to clear save data:", e);
     }
   }
 
@@ -359,7 +359,7 @@ class UpgradeManager {
       levelCap: levelCap,
       isMaxed: isMaxed,
       cost: cost,
-      costFormatted: isMaxed ? 'MAXED' : formatNumber(cost),
+      costFormatted: isMaxed ? "MAXED" : formatNumber(cost),
       canAfford: canAfford,
       effectPercent: effectPercent,
       name: this.getUpgradeName(upgradeType),
@@ -373,17 +373,17 @@ class UpgradeManager {
 
   getUpgradeName(upgradeType) {
     const names = {
-      fireRate: 'Fire Rate',
-      size: 'Cannonball Size',
-      speed: 'Firing Speed',
-      accuracy: 'Accuracy',
+      fireRate: "Fire Rate",
+      size: "Cannonball Size",
+      speed: "Firing Speed",
+      accuracy: "Accuracy",
     };
     return names[upgradeType] || upgradeType;
   }
 
   getUpgradeDescription(upgradeType, effectPercent, isMaxed) {
     if (isMaxed) {
-      return 'Maximum level reached';
+      return "Maximum level reached";
     }
 
     const descriptions = {
@@ -392,7 +392,7 @@ class UpgradeManager {
       speed: `+${effectPercent}% faster cannonballs`,
       accuracy: `+${effectPercent}% more accurate`,
     };
-    return descriptions[upgradeType] || '';
+    return descriptions[upgradeType] || "";
   }
 }
 
