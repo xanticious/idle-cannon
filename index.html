@@ -428,6 +428,16 @@
           font-size: 18px;
         }
 
+        .hud-content {
+          max-height: calc(100vh - 120px);
+          max-height: calc(100dvh - 120px);
+          max-height: calc(var(--vh, 1vh) * 100 - 120px);
+          overflow-y: auto;
+          width: 100%;
+          -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+          scroll-behavior: smooth;
+        }
+
         .stats-section {
           flex-direction: column;
           gap: 5px;
@@ -537,6 +547,16 @@
         .money-display,
         .gems-display {
           font-size: 16px;
+        }
+
+        .hud-content {
+          max-height: calc(100vh - 100px);
+          max-height: calc(100dvh - 100px);
+          max-height: calc(var(--vh, 1vh) * 100 - 100px);
+          overflow-y: auto;
+          width: 100%;
+          -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+          scroll-behavior: smooth;
         }
 
         .tab-container {
