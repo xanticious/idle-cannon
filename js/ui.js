@@ -1,5 +1,5 @@
 // UI Management for HUD and interface
-import { formatNumber } from './utils.js';
+import { formatNumber } from "./utils.js";
 
 class UIManager {
   constructor(
@@ -16,13 +16,16 @@ class UIManager {
     this.prestigeManager = prestigeManager;
     this.game = null; // Will be set by game
     this.isHidden = false;
-    this.currentTab = 'upgrades'; // 'upgrades', 'prestige', 'cannons'
+    this.currentTab = "upgrades"; // 'upgrades', 'prestige', 'cannons'
     this.elements = {};
 
     this.initializeElements();
     this.setupEventListeners();
     this.createTabs();
     this.createUpgradeCards();
+
+    // Set initial visibility state for world display
+    this.updateHUDVisibility();
   }
 
   setGame(game) {
@@ -37,41 +40,46 @@ class UIManager {
   initializeElements() {
     // Cache DOM elements
     this.elements = {
-      hud: document.getElementById('hud'),
-      hudToggle: document.getElementById('hudToggle'),
-      showHudButton: document.getElementById('showHudButton'),
-      moneyAmount: document.getElementById('moneyAmount'),
-      totalEarned: document.getElementById('totalEarned'),
-      streakMultiplier: document.getElementById('streakMultiplier'),
-      castlesDestroyed: document.getElementById('castlesDestroyed'),
-      upgradesContainer: document.getElementById('upgradesContainer'),
-      resetProgress: document.getElementById('resetProgress'),
-      worldName: document.getElementById('worldName'),
-      gemsAmount: document.getElementById('gemsAmount'),
-      gemsDisplay: document.getElementById('gemsDisplay'),
-      prestigeLevel: document.getElementById('prestigeLevel'),
-      prestigeLevelDisplay: document.getElementById('prestigeLevelDisplay'),
+      hud: document.getElementById("hud"),
+      hudToggle: document.getElementById("hudToggle"),
+      showHudButton: document.getElementById("showHudButton"),
+      moneyAmount: document.getElementById("moneyAmount"),
+      totalEarned: document.getElementById("totalEarned"),
+      streakMultiplier: document.getElementById("streakMultiplier"),
+      castlesDestroyed: document.getElementById("castlesDestroyed"),
+      upgradesContainer: document.getElementById("upgradesContainer"),
+      resetProgress: document.getElementById("resetProgress"),
+      worldName: document.getElementById("worldName"),
+      worldNameTop: document.getElementById("worldNameTop"),
+      worldDisplay: document.getElementById("worldDisplay"),
+      gemsAmount: document.getElementById("gemsAmount"),
+      gemsDisplay: document.getElementById("gemsDisplay"),
+      prestigeLevel: document.getElementById("prestigeLevel"),
+      prestigeLevelDisplay: document.getElementById("prestigeLevelDisplay"),
+      fullscreenButton: document.getElementById("fullscreenButton"),
+      fullscreenEnterIcon: document.getElementById("fullscreenEnterIcon"),
+      fullscreenExitIcon: document.getElementById("fullscreenExitIcon"),
     };
   }
 
   setupEventListeners() {
     // HUD toggle button
-    this.elements.hudToggle.addEventListener('click', () => {
+    this.elements.hudToggle.addEventListener("click", () => {
       this.toggleHUD();
     });
 
     // Show HUD button
-    this.elements.showHudButton.addEventListener('click', () => {
+    this.elements.showHudButton.addEventListener("click", () => {
       this.showHUD();
     });
 
     // Reset progress button
-    this.elements.resetProgress.addEventListener('click', () => {
+    this.elements.resetProgress.addEventListener("click", () => {
       this.handleResetProgress();
     });
 
     // Auto-save when window closes
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener("beforeunload", () => {
       this.upgradeManager.saveProgress();
     });
 
@@ -79,51 +87,72 @@ class UIManager {
     setInterval(() => {
       this.upgradeManager.saveProgress();
     }, 30000); // Save every 30 seconds
+
+    // Fullscreen toggle button
+    if (this.elements.fullscreenButton) {
+      this.elements.fullscreenButton.addEventListener("click", () => {
+        this.toggleFullscreen();
+      });
+    }
+
+    // Listen for fullscreen changes to update icon
+    document.addEventListener("fullscreenchange", () => {
+      this.updateFullscreenIcon();
+    });
+    document.addEventListener("webkitfullscreenchange", () => {
+      this.updateFullscreenIcon();
+    });
+    document.addEventListener("mozfullscreenchange", () => {
+      this.updateFullscreenIcon();
+    });
+    document.addEventListener("MSFullscreenChange", () => {
+      this.updateFullscreenIcon();
+    });
   }
 
   createTabs() {
     // Create tab navigation if it doesn't exist
-    let tabContainer = document.getElementById('tabContainer');
+    let tabContainer = document.getElementById("tabContainer");
     if (!tabContainer) {
-      tabContainer = document.createElement('div');
-      tabContainer.id = 'tabContainer';
-      tabContainer.className = 'tab-container';
+      tabContainer = document.createElement("div");
+      tabContainer.id = "tabContainer";
+      tabContainer.className = "tab-container";
 
       const tabs = [
-        { id: 'upgrades', label: 'Upgrades', visible: true },
+        { id: "upgrades", label: "Upgrades", visible: true },
         {
-          id: 'prestige',
-          label: 'Prestige Upgrades',
+          id: "prestige",
+          label: "Prestige Upgrades",
           visible: () =>
             this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
         },
         {
-          id: 'cannons',
-          label: 'Cannons',
+          id: "cannons",
+          label: "Cannons",
           visible: () =>
             this.prestigeManager && this.prestigeManager.prestigeLevel > 0,
         },
       ];
 
       tabs.forEach((tab) => {
-        const tabButton = document.createElement('button');
+        const tabButton = document.createElement("button");
         tabButton.id = `${tab.id}Tab`;
         tabButton.className = `tab-button ${
-          this.currentTab === tab.id ? 'active' : ''
+          this.currentTab === tab.id ? "active" : ""
         }`;
         tabButton.textContent = tab.label;
-        tabButton.addEventListener('click', () => this.switchTab(tab.id));
+        tabButton.addEventListener("click", () => this.switchTab(tab.id));
 
         // Set initial visibility
         const isVisible =
-          typeof tab.visible === 'function' ? tab.visible() : tab.visible;
-        tabButton.style.display = isVisible ? 'inline-block' : 'none';
+          typeof tab.visible === "function" ? tab.visible() : tab.visible;
+        tabButton.style.display = isVisible ? "inline-block" : "none";
 
         tabContainer.appendChild(tabButton);
       });
 
       // Insert before upgrades container
-      const upgradesContainer = document.getElementById('upgradesContainer');
+      const upgradesContainer = document.getElementById("upgradesContainer");
       upgradesContainer.parentNode.insertBefore(
         tabContainer,
         upgradesContainer
@@ -135,10 +164,10 @@ class UIManager {
     this.currentTab = tabId;
 
     // Update tab button states
-    document.querySelectorAll('.tab-button').forEach((btn) => {
-      btn.classList.remove('active');
+    document.querySelectorAll(".tab-button").forEach((btn) => {
+      btn.classList.remove("active");
     });
-    document.getElementById(`${tabId}Tab`).classList.add('active');
+    document.getElementById(`${tabId}Tab`).classList.add("active");
 
     // Update content
     this.updateTabContent();
@@ -146,16 +175,16 @@ class UIManager {
 
   updateTabContent() {
     const container = this.elements.upgradesContainer;
-    container.innerHTML = '';
+    container.innerHTML = "";
 
     switch (this.currentTab) {
-      case 'upgrades':
+      case "upgrades":
         this.createUpgradeCards();
         break;
-      case 'prestige':
+      case "prestige":
         this.createPrestigeUpgradeCards();
         break;
-      case 'cannons':
+      case "cannons":
         this.createCannonCards();
         break;
     }
@@ -174,29 +203,29 @@ class UIManager {
   }
 
   createPrestigeUpgradeCard(upgradeInfo) {
-    const card = document.createElement('div');
-    card.className = 'upgrade-card prestige-upgrade-card';
+    const card = document.createElement("div");
+    card.className = "upgrade-card prestige-upgrade-card";
     card.dataset.upgradeType = upgradeInfo.type;
 
     card.innerHTML = `
       <div class="upgrade-name">${upgradeInfo.name}</div>
       <div class="upgrade-level">Level: <span class="level-value">${
         upgradeInfo.level
-      }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''}</div>
+      }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""}</div>
       <div class="upgrade-cost">Cost: <span class="cost-value">${
         upgradeInfo.costFormatted
       }</span> 💎</div>
       <div class="upgrade-effect">${upgradeInfo.description}</div>
       <button class="upgrade-button" ${
-        !upgradeInfo.canAfford || upgradeInfo.isMaxed ? 'disabled' : ''
+        !upgradeInfo.canAfford || upgradeInfo.isMaxed ? "disabled" : ""
       }>
-        ${upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE'}
+        ${upgradeInfo.isMaxed ? "MAXED" : "UPGRADE"}
       </button>
     `;
 
     // Add click handler for upgrade button
-    const button = card.querySelector('.upgrade-button');
-    button.addEventListener('click', () => {
+    const button = card.querySelector(".upgrade-button");
+    button.addEventListener("click", () => {
       this.handlePrestigeUpgrade(upgradeInfo.type);
     });
 
@@ -220,22 +249,22 @@ class UIManager {
   }
 
   createCannonCard(cannon, isSelected) {
-    const card = document.createElement('div');
-    card.className = `cannon-card ${isSelected ? 'selected' : ''}`;
+    const card = document.createElement("div");
+    card.className = `cannon-card ${isSelected ? "selected" : ""}`;
     card.dataset.cannonId = cannon.id;
 
     card.innerHTML = `
       <div class="cannon-name">${cannon.name}</div>
       <div class="cannon-description">${cannon.description}</div>
-      <div class="cannon-status">${isSelected ? 'SELECTED' : 'AVAILABLE'}</div>
-      <button class="cannon-button" ${isSelected ? 'disabled' : ''}>
-        ${isSelected ? 'SELECTED' : 'SELECT'}
+      <div class="cannon-status">${isSelected ? "SELECTED" : "AVAILABLE"}</div>
+      <button class="cannon-button" ${isSelected ? "disabled" : ""}>
+        ${isSelected ? "SELECTED" : "SELECT"}
       </button>
     `;
 
     // Add click handler for select button
-    const button = card.querySelector('.cannon-button');
-    button.addEventListener('click', () => {
+    const button = card.querySelector(".cannon-button");
+    button.addEventListener("click", () => {
       this.handleCannonSelect(cannon.id);
     });
 
@@ -263,7 +292,7 @@ class UIManager {
     }
   }
   createUpgradeCards() {
-    const upgradeTypes = ['fireRate', 'size'];
+    const upgradeTypes = ["fireRate", "size"];
 
     upgradeTypes.forEach((type) => {
       const card = this.createUpgradeCard(type);
@@ -274,8 +303,8 @@ class UIManager {
   createUpgradeCard(upgradeType) {
     const upgradeInfo = this.upgradeManager.getUpgradeInfo(upgradeType);
 
-    const card = document.createElement('div');
-    card.className = 'upgrade-card';
+    const card = document.createElement("div");
+    card.className = "upgrade-card";
     card.dataset.upgradeType = upgradeType;
 
     card.innerHTML = `
@@ -283,22 +312,22 @@ class UIManager {
             <div class="upgrade-level">Level: <span class="level-value">${
               upgradeInfo.level
             }</span>${
-      upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''
+      upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""
     }</div>
             <div class="upgrade-cost">Cost: $<span class="cost-value">${
               upgradeInfo.costFormatted
             }</span></div>
             <div class="upgrade-effect">${upgradeInfo.description}</div>
             <button class="upgrade-button" ${
-              !upgradeInfo.canAfford || upgradeInfo.isMaxed ? 'disabled' : ''
+              !upgradeInfo.canAfford || upgradeInfo.isMaxed ? "disabled" : ""
             }>
-                ${upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE'}
+                ${upgradeInfo.isMaxed ? "MAXED" : "UPGRADE"}
             </button>
         `;
 
     // Add click handler for upgrade button
-    const button = card.querySelector('.upgrade-button');
-    button.addEventListener('click', () => {
+    const button = card.querySelector(".upgrade-button");
+    button.addEventListener("click", () => {
       this.handleUpgrade(upgradeType);
     });
 
@@ -328,23 +357,23 @@ class UIManager {
     const upgradeInfo = this.upgradeManager.getUpgradeInfo(upgradeType);
 
     // Update values
-    card.querySelector('.level-value').textContent = upgradeInfo.level;
-    const levelDiv = card.querySelector('.upgrade-level');
+    card.querySelector(".level-value").textContent = upgradeInfo.level;
+    const levelDiv = card.querySelector(".upgrade-level");
     levelDiv.innerHTML = `Level: <span class="level-value">${
       upgradeInfo.level
-    }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ''}`;
+    }</span>${upgradeInfo.levelCap ? ` / ${upgradeInfo.levelCap}` : ""}`;
 
-    card.querySelector('.cost-value').textContent = upgradeInfo.costFormatted;
-    card.querySelector('.upgrade-effect').textContent = upgradeInfo.description;
+    card.querySelector(".cost-value").textContent = upgradeInfo.costFormatted;
+    card.querySelector(".upgrade-effect").textContent = upgradeInfo.description;
 
     // Update button state
-    const button = card.querySelector('.upgrade-button');
+    const button = card.querySelector(".upgrade-button");
     button.disabled = !upgradeInfo.canAfford || upgradeInfo.isMaxed;
-    button.textContent = upgradeInfo.isMaxed ? 'MAXED' : 'UPGRADE';
+    button.textContent = upgradeInfo.isMaxed ? "MAXED" : "UPGRADE";
   }
 
   updateAllUpgradeCards() {
-    const upgradeTypes = ['fireRate', 'size'];
+    const upgradeTypes = ["fireRate", "size"];
     upgradeTypes.forEach((type) => {
       this.updateUpgradeCard(type);
     });
@@ -358,15 +387,15 @@ class UIManager {
     if (!card) return;
 
     // Add visual effect
-    card.style.transform = 'scale(1.05)';
+    card.style.transform = "scale(1.05)";
     const color = isPrestige
-      ? 'rgba(128, 0, 128, 0.5)'
-      : 'rgba(76, 175, 80, 0.5)';
+      ? "rgba(128, 0, 128, 0.5)"
+      : "rgba(76, 175, 80, 0.5)";
     card.style.boxShadow = `0 0 20px ${color}`;
 
     setTimeout(() => {
-      card.style.transform = '';
-      card.style.boxShadow = '';
+      card.style.transform = "";
+      card.style.boxShadow = "";
     }, 300);
   }
 
@@ -396,13 +425,13 @@ class UIManager {
       const showPrestige = this.prestigeManager.prestigeLevel > 0;
       if (this.elements.gemsDisplay) {
         this.elements.gemsDisplay.style.display = showPrestige
-          ? 'block'
-          : 'none';
+          ? "block"
+          : "none";
       }
       if (this.elements.prestigeLevelDisplay) {
         this.elements.prestigeLevelDisplay.style.display = showPrestige
-          ? 'block'
-          : 'none';
+          ? "block"
+          : "none";
       }
     }
 
@@ -410,6 +439,12 @@ class UIManager {
     if (this.worldManager && this.elements.worldName) {
       let worldText = this.worldManager.getWorldProgressText();
       this.elements.worldName.textContent = worldText;
+    }
+
+    // Update top world display
+    if (this.worldManager && this.elements.worldNameTop) {
+      let worldText = this.worldManager.getWorldProgressText();
+      this.elements.worldNameTop.textContent = worldText;
     }
 
     // Update world progression display if element exists
@@ -427,9 +462,9 @@ class UIManager {
     this.updateTabVisibility();
 
     // Update current tab content
-    if (this.currentTab === 'prestige') {
+    if (this.currentTab === "prestige") {
       this.updateTabContent();
-    } else if (this.currentTab === 'cannons') {
+    } else if (this.currentTab === "cannons") {
       this.updateTabContent();
     } else {
       // Update regular upgrade affordability
@@ -442,17 +477,17 @@ class UIManager {
 
   updateTabVisibility() {
     // Show/hide prestige and cannon tabs based on prestige level
-    const prestigeTab = document.getElementById('prestigeTab');
-    const cannonsTab = document.getElementById('cannonsTab');
+    const prestigeTab = document.getElementById("prestigeTab");
+    const cannonsTab = document.getElementById("cannonsTab");
 
     const showPrestigeTabs =
       this.prestigeManager && this.prestigeManager.prestigeLevel > 0;
 
     if (prestigeTab) {
-      prestigeTab.style.display = showPrestigeTabs ? 'inline-block' : 'none';
+      prestigeTab.style.display = showPrestigeTabs ? "inline-block" : "none";
     }
     if (cannonsTab) {
-      cannonsTab.style.display = showPrestigeTabs ? 'inline-block' : 'none';
+      cannonsTab.style.display = showPrestigeTabs ? "inline-block" : "none";
     }
   }
 
@@ -468,7 +503,7 @@ class UIManager {
 
   // Check if any upgrade is affordable
   canAffordAnyUpgrade() {
-    const upgradeTypes = ['fireRate', 'size'];
+    const upgradeTypes = ["fireRate", "size"];
     return upgradeTypes.some((type) => {
       const upgradeInfo = this.upgradeManager.getUpgradeInfo(type);
       return upgradeInfo.canAfford && !upgradeInfo.isMaxed;
@@ -477,29 +512,40 @@ class UIManager {
 
   updateHUDVisibility() {
     if (this.isHidden) {
-      this.elements.hud.classList.add('hidden');
+      this.elements.hud.classList.add("hidden");
+
+      // Show the world display when HUD is hidden
+      if (this.elements.worldDisplay) {
+        this.elements.worldDisplay.style.display = "block";
+      }
 
       // Check if any upgrade is affordable to add asterisk
       const canAffordAny = this.canAffordAnyUpgrade();
       this.elements.hudToggle.textContent = canAffordAny
-        ? 'Show HUD*'
-        : 'Show HUD';
+        ? "Show HUD*"
+        : "Show HUD";
       this.elements.showHudButton.textContent = canAffordAny
-        ? 'Show HUD*'
-        : 'Show HUD';
+        ? "Show HUD*"
+        : "Show HUD";
 
-      this.elements.showHudButton.classList.add('visible');
+      this.elements.showHudButton.classList.add("visible");
     } else {
-      this.elements.hud.classList.remove('hidden');
-      this.elements.hudToggle.textContent = 'Hide HUD';
-      this.elements.showHudButton.classList.remove('visible');
+      this.elements.hud.classList.remove("hidden");
+
+      // Hide the world display when HUD is shown
+      if (this.elements.worldDisplay) {
+        this.elements.worldDisplay.style.display = "none";
+      }
+
+      this.elements.hudToggle.textContent = "Hide HUD";
+      this.elements.showHudButton.classList.remove("visible");
     }
   }
 
   showMoneyEarned(amount, x, y) {
     // Create floating money text
-    const moneyText = document.createElement('div');
-    moneyText.className = 'floating-money';
+    const moneyText = document.createElement("div");
+    moneyText.className = "floating-money";
     moneyText.textContent = `+$${formatNumber(amount)}`;
     moneyText.style.cssText = `
             position: fixed;
@@ -515,9 +561,9 @@ class UIManager {
         `;
 
     // Add animation keyframes if not already added
-    if (!document.querySelector('#floating-money-style')) {
-      const style = document.createElement('style');
-      style.id = 'floating-money-style';
+    if (!document.querySelector("#floating-money-style")) {
+      const style = document.createElement("style");
+      style.id = "floating-money-style";
       style.textContent = `
                 @keyframes floatUp {
                     0% {
@@ -544,8 +590,8 @@ class UIManager {
   }
 
   // Show notification messages
-  showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
+  showNotification(message, type = "info") {
+    const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
     notification.style.cssText = `
@@ -553,11 +599,11 @@ class UIManager {
             top: 20px;
             right: 20px;
             background: ${
-              type === 'success'
-                ? '#4CAF50'
-                : type === 'error'
-                ? '#f44336'
-                : '#2196F3'
+              type === "success"
+                ? "#4CAF50"
+                : type === "error"
+                ? "#f44336"
+                : "#2196F3"
             };
             color: white;
             padding: 12px 20px;
@@ -573,14 +619,14 @@ class UIManager {
 
     // Animate in
     setTimeout(() => {
-      notification.style.opacity = '1';
-      notification.style.transform = 'translateX(0)';
+      notification.style.opacity = "1";
+      notification.style.transform = "translateX(0)";
     }, 10);
 
     // Animate out and remove
     setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transform = 'translateX(100%)';
+      notification.style.opacity = "0";
+      notification.style.transform = "translateX(100%)";
 
       setTimeout(() => {
         if (notification.parentNode) {
@@ -592,7 +638,7 @@ class UIManager {
 
   // Get canvas coordinates for money earned display
   getCanvasPosition(canvasX, canvasY) {
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById("gameCanvas");
     const rect = canvas.getBoundingClientRect();
 
     return {
@@ -611,13 +657,13 @@ class UIManager {
   // Handle reset progress with confirmation
   handleResetProgress() {
     const confirmed = confirm(
-      'Are you sure you want to reset ALL progress?\n\n' +
-        'This will permanently delete:\n' +
-        '• All money and upgrades\n' +
-        '• World progression\n' +
-        '• Prestige level and gems\n' +
-        '• Statistics and saved data\n\n' +
-        'This action cannot be undone!'
+      "Are you sure you want to reset ALL progress?\n\n" +
+        "This will permanently delete:\n" +
+        "• All money and upgrades\n" +
+        "• World progression\n" +
+        "• Prestige level and gems\n" +
+        "• Statistics and saved data\n\n" +
+        "This action cannot be undone!"
     );
 
     if (confirmed) {
@@ -636,21 +682,21 @@ class UIManager {
       this.updateTabContent();
 
       // Show confirmation message
-      this.showNotification('All progress has been reset!', 'success');
+      this.showNotification("All progress has been reset!", "success");
     }
   }
 
   // Show notification messages
-  showNotification(message, type = 'info') {
+  showNotification(message, type = "info") {
     // Simple notification - could be enhanced with a proper notification system
     console.log(`[${type.toUpperCase()}] ${message}`);
   }
 
   // Show custom modal overlay
-  showModal(title, subtitle = '', buttonText = 'Continue', onConfirm = null) {
+  showModal(title, subtitle = "", buttonText = "Continue", onConfirm = null) {
     // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'game-modal-overlay';
+    const overlay = document.createElement("div");
+    overlay.className = "game-modal-overlay";
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -666,8 +712,8 @@ class UIManager {
     `;
 
     // Create modal content
-    const modal = document.createElement('div');
-    modal.className = 'game-modal';
+    const modal = document.createElement("div");
+    modal.className = "game-modal";
     modal.style.cssText = `
       background: linear-gradient(135deg, #2c3e50, #34495e);
       border: 3px solid #f39c12;
@@ -681,7 +727,7 @@ class UIManager {
     `;
 
     // Add CSS animation
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       @keyframes modalSlideIn {
         from {
@@ -697,7 +743,7 @@ class UIManager {
     document.head.appendChild(style);
 
     // Create title
-    const titleElement = document.createElement('h1');
+    const titleElement = document.createElement("h1");
     titleElement.textContent = title;
     titleElement.style.cssText = `
       color: #f39c12;
@@ -709,7 +755,7 @@ class UIManager {
     // Create subtitle if provided
     let subtitleElement = null;
     if (subtitle) {
-      subtitleElement = document.createElement('p');
+      subtitleElement = document.createElement("p");
       subtitleElement.textContent = subtitle;
       subtitleElement.style.cssText = `
         color: #ecf0f1;
@@ -720,7 +766,7 @@ class UIManager {
     }
 
     // Create button
-    const button = document.createElement('button');
+    const button = document.createElement("button");
     button.textContent = buttonText;
     button.style.cssText = `
       background: linear-gradient(135deg, #e74c3c, #c0392b);
@@ -738,18 +784,18 @@ class UIManager {
     `;
 
     // Button hover effects
-    button.addEventListener('mouseenter', () => {
-      button.style.transform = 'translateY(-2px)';
-      button.style.boxShadow = '0 6px 20px rgba(231, 76, 60, 0.6)';
+    button.addEventListener("mouseenter", () => {
+      button.style.transform = "translateY(-2px)";
+      button.style.boxShadow = "0 6px 20px rgba(231, 76, 60, 0.6)";
     });
 
-    button.addEventListener('mouseleave', () => {
-      button.style.transform = 'translateY(0)';
-      button.style.boxShadow = '0 4px 15px rgba(231, 76, 60, 0.4)';
+    button.addEventListener("mouseleave", () => {
+      button.style.transform = "translateY(0)";
+      button.style.boxShadow = "0 4px 15px rgba(231, 76, 60, 0.4)";
     });
 
     // Button click handler
-    button.addEventListener('click', () => {
+    button.addEventListener("click", () => {
       document.body.removeChild(overlay);
       document.head.removeChild(style);
       if (onConfirm) {
@@ -773,22 +819,22 @@ class UIManager {
 
     // Allow ESC key to close modal
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         document.body.removeChild(overlay);
         document.head.removeChild(style);
-        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener("keydown", handleEscape);
         if (onConfirm) {
           onConfirm();
         }
       }
     };
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
   }
 
   // Handle prestige event
   onPrestige() {
     // Switch to upgrades tab
-    this.switchTab('upgrades');
+    this.switchTab("upgrades");
 
     // Update all UI elements
     this.updateStats();
@@ -796,9 +842,69 @@ class UIManager {
 
     // Show celebration notification
     this.showNotification(
-      'Prestige achieved! Welcome to the multiverse!',
-      'success'
+      "Prestige achieved! Welcome to the multiverse!",
+      "success"
     );
+  }
+
+  // Fullscreen functionality
+  toggleFullscreen() {
+    if (this.isFullscreen()) {
+      this.exitFullscreen();
+    } else {
+      this.enterFullscreen();
+    }
+  }
+
+  isFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
+  enterFullscreen() {
+    const element = document.documentElement;
+    if (element.requestFullscreen) {
+      element.requestFullscreen();
+    } else if (element.webkitRequestFullscreen) {
+      element.webkitRequestFullscreen();
+    } else if (element.mozRequestFullScreen) {
+      element.mozRequestFullScreen();
+    } else if (element.msRequestFullscreen) {
+      element.msRequestFullscreen();
+    }
+  }
+
+  exitFullscreen() {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+
+  updateFullscreenIcon() {
+    if (
+      !this.elements.fullscreenEnterIcon ||
+      !this.elements.fullscreenExitIcon
+    ) {
+      return;
+    }
+
+    const isFullscreen = this.isFullscreen();
+    this.elements.fullscreenEnterIcon.style.display = isFullscreen
+      ? "none"
+      : "block";
+    this.elements.fullscreenExitIcon.style.display = isFullscreen
+      ? "block"
+      : "none";
   }
 }
 

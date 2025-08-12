@@ -568,13 +568,30 @@ class Game {
 
     // Maintain aspect ratio
     const aspectRatio = CONFIG.CANVAS.WIDTH / CONFIG.CANVAS.HEIGHT;
-    let newWidth = rect.width;
-    let newHeight = rect.height;
+    let newWidth = rect.width - 40; // Leave some margin
+    let newHeight = rect.height - 40; // Leave some margin
 
+    // Calculate which dimension constrains us more
     if (newWidth / newHeight > aspectRatio) {
+      // Width is not the constraint, height is
       newWidth = newHeight * aspectRatio;
     } else {
+      // Height is not the constraint, width is
       newHeight = newWidth / aspectRatio;
+    }
+
+    // Ensure we don't exceed viewport bounds
+    const maxWidth = window.innerWidth - 40;
+    const maxHeight = window.innerHeight - 40;
+
+    if (newWidth > maxWidth) {
+      newWidth = maxWidth;
+      newHeight = newWidth / aspectRatio;
+    }
+
+    if (newHeight > maxHeight) {
+      newHeight = maxHeight;
+      newWidth = newHeight * aspectRatio;
     }
 
     this.canvas.style.width = newWidth + "px";
