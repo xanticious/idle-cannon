@@ -203,9 +203,9 @@ class Castle {
       if (betterCastlesLevel > 0) {
         minWidth -= 4;
         minHeight -= 4;
-        maxWidth += 4;
-        maxHeight += 4;
-        
+        maxWidth += 2;
+        maxHeight += 2;
+
         // Get current streak multiplier
         const currentStreak = this.upgradeManager.getMoneyStreakMultiplier();
         const maxStreak = CONFIG.MONEY.MAX_STREAK_MULTIPLIER;
