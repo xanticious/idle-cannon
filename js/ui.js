@@ -242,29 +242,6 @@ class UIManager {
         );
       }
     });
-
-    // Add swipe gesture to close HUD on mobile
-    let startY = 0;
-    let startX = 0;
-
-    this.elements.hud.addEventListener("touchstart", (e) => {
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-    });
-
-    this.elements.hud.addEventListener("touchmove", (e) => {
-      if (!this.isHidden) {
-        const currentY = e.touches[0].clientY;
-        const currentX = e.touches[0].clientX;
-        const diffY = startY - currentY;
-        const diffX = Math.abs(startX - currentX);
-
-        // If swiping up and not too much horizontal movement
-        if (diffY > 50 && diffX < 100) {
-          this.toggleHUD();
-        }
-      }
-    });
   }
 
   handleOrientationChange() {
