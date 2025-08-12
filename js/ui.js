@@ -69,12 +69,15 @@ class UIManager {
     // Detect if the device is mobile
     this.isMobile = window.innerWidth <= 768 || "ontouchstart" in window;
 
+    // Set up dynamic viewport height handling for mobile browsers
+    this.setupDynamicViewportHeight();
+
     // Add viewport meta tag optimization for mobile if not present
     if (this.isMobile && !document.querySelector('meta[name="viewport"]')) {
       const viewport = document.createElement("meta");
       viewport.name = "viewport";
       viewport.content =
-        "width=device-width, initial-scale=1.0, user-scalable=no";
+        "width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no";
       document.head.appendChild(viewport);
     }
 
@@ -94,6 +97,126 @@ class UIManager {
     window.addEventListener("resize", () => {
       this.handleResize();
     });
+
+    // Improve fullscreen button visibility on mobile
+    this.enhanceFullscreenButton();
+
+    // Debug fullscreen button visibility on mobile
+    if (this.isMobile) {
+      this.debugFullscreenButton();
+    }
+  }
+
+  debugFullscreenButton() {
+    const fullscreenButton = this.elements.fullscreenButton;
+    if (fullscreenButton) {
+      console.log("Fullscreen button found:", fullscreenButton);
+      console.log(
+        "Button computed style:",
+        window.getComputedStyle(fullscreenButton)
+      );
+      console.log("Button position:", {
+        bottom: fullscreenButton.style.bottom,
+        right: fullscreenButton.style.right,
+        zIndex: fullscreenButton.style.zIndex,
+        display: fullscreenButton.style.display,
+      });
+
+      // Make sure it's visible
+      setTimeout(() => {
+        const rect = fullscreenButton.getBoundingClientRect();
+        console.log("Button position rect:", rect);
+        console.log("Viewport dimensions:", {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          visualViewport: window.visualViewport
+            ? {
+                width: window.visualViewport.width,
+                height: window.visualViewport.height,
+              }
+            : "not supported",
+        });
+      }, 1000);
+    } else {
+      console.error("Fullscreen button not found!");
+    }
+  }
+
+  setupDynamicViewportHeight() {
+    // Function to set CSS custom property for viewport height
+    const setViewportHeight = () => {
+      // Get the actual viewport height
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+
+      // For mobile browsers, use the visual viewport API if available
+      if (window.visualViewport) {
+        const vvh = window.visualViewport.height * 0.01;
+        document.documentElement.style.setProperty("--vvh", `${vvh}px`);
+      }
+    };
+
+    // Set initial value
+    setViewportHeight();
+
+    // Update on resize
+    window.addEventListener("resize", setViewportHeight);
+
+    // Update on visual viewport change (mobile address bar show/hide)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", setViewportHeight);
+    }
+
+    // Special handling for mobile orientation change
+    window.addEventListener("orientationchange", () => {
+      setTimeout(setViewportHeight, 100);
+    });
+  }
+
+  enhanceFullscreenButton() {
+    const fullscreenButton = this.elements.fullscreenButton;
+    if (!fullscreenButton) return;
+
+    // Make fullscreen button more prominent on mobile
+    if (this.isMobile) {
+      // Ensure the button is always visible and properly positioned
+      const updateButtonPosition = () => {
+        fullscreenButton.style.cssText += `
+          position: fixed !important;
+          z-index: 2000 !important;
+          bottom: max(20px, env(safe-area-inset-bottom, 20px)) !important;
+          right: max(20px, env(safe-area-inset-right, 20px)) !important;
+          background: rgba(0, 0, 0, 0.95) !important;
+          border: 2px solid rgba(255, 255, 255, 0.4) !important;
+          width: 44px !important;
+          height: 44px !important;
+          border-radius: 8px !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+          touch-action: manipulation !important;
+          display: flex !important;
+        `;
+      };
+
+      updateButtonPosition();
+
+      // Add extra touch feedback
+      fullscreenButton.addEventListener("touchstart", () => {
+        fullscreenButton.style.transform = "scale(0.9)";
+        fullscreenButton.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+      });
+
+      fullscreenButton.addEventListener("touchend", () => {
+        setTimeout(() => {
+          fullscreenButton.style.transform = "";
+          fullscreenButton.style.backgroundColor = "";
+        }, 150);
+      });
+
+      // Re-apply position on orientation change
+      window.addEventListener("orientationchange", () => {
+        setTimeout(updateButtonPosition, 200);
+      });
+    }
   }
 
   setupMobileEventListeners() {
